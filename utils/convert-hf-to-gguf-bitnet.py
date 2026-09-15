@@ -727,14 +727,18 @@ def quantize_to_i2_s(w: np.ndarray, override_scale: float = None) -> np.ndarray:
     return result
 
 
-def transform_to_tl1(x: np.ndarray):
-    scale = np.max(np.abs(x))
+def transform_to_tl1(x: np.ndarray, override_scale: float = None):
+    # For offline-quantized models x is already ternary {-1,0,1}, so max(abs(x))
+    # is trivially 1.0 and loses the real weight_scale; use override_scale instead.
+    scale = np.max(np.abs(x)) if override_scale is None else np.float32(override_scale)
     # res = np.round(x / scale + 2).astype(np.uint8)
     res = preprocess_weights_tl1(x)
     return res, scale
 
-def transform_to_tl2(x: np.ndarray):
-    scale = np.max(np.abs(x))
+def transform_to_tl2(x: np.ndarray, override_scale: float = None):
+    # For offline-quantized models x is already ternary {-1,0,1}, so max(abs(x))
+    # is trivially 1.0 and loses the real weight_scale; use override_scale instead.
+    scale = np.max(np.abs(x)) if override_scale is None else np.float32(override_scale)
     # res = np.round(x / scale + 2).astype(np.uint8)
     res = preprocess_weights_tl2(x)
     return res, scale
@@ -903,7 +907,11 @@ class LlamaModel(Model):
 
                 self.gguf_writer.add_tensor(new_name, data, raw_shape=shape, raw_dtype=data_qtype)
                 if i2_scale is not None:
-                    self.gguf_writer.add_tensor(new_name + "_scale", i2_scale, raw_dtype=gguf.GGMLQuantizationType.F32)
+                    # llama.cpp looks up the per-tensor TL1/TL2 scale as "<layer>.scale"
+                    # (see tn(LLM_TENSOR_*, "scale", i) in bitnet.cpp), not "<name>.weight_scale".
+                    assert new_name.endswith(".weight")
+                    scale_name = new_name[: -len(".weight")] + ".scale"
+                    self.gguf_writer.add_tensor(scale_name, i2_scale, raw_dtype=gguf.GGMLQuantizationType.F32)
 
 
     def set_gguf_parameters(self):
@@ -1161,19 +1169,19 @@ class BitnetModel(Model):
 
                 i2_scale = None
                 if self.ftype != gguf.GGMLQuantizationType.F32 and extra_f16 and not extra_f32:
+                    # Use original weight_scale if available (offline-quantized models)
+                    orig_scale = scale_map.get(name.replace(".weight", ""))
+                    override_scale = orig_scale.item() if orig_scale is not None else None
                     if self.ftype == gguf.GGMLQuantizationType.I2_S and suit_i2:
                         data_qtype = gguf.GGMLQuantizationType.I2_S
-                        # Use original weight_scale if available (offline-quantized models)
-                        orig_scale = scale_map.get(name.replace(".weight", ""))
-                        override_scale = orig_scale.item() if orig_scale is not None else None
                         data = quantize_to_i2_s(data, override_scale=override_scale)
                     elif self.ftype == gguf.GGMLQuantizationType.TL1 and suit_i2:
-                        data, i2_scale = transform_to_tl1(data)
+                        data, i2_scale = transform_to_tl1(data, override_scale=override_scale)
                         assert data.dtype == np.uint8
                         assert i2_scale.dtype == np.float32
                         data_qtype = gguf.GGMLQuantizationType.TL1
                     elif self.ftype == gguf.GGMLQuantizationType.TL2 and suit_i2:
-                        data, i2_scale = transform_to_tl2(data)
+                        data, i2_scale = transform_to_tl2(data, override_scale=override_scale)
                         assert data.dtype == np.uint8
                         assert i2_scale.dtype == np.float32
                         data_qtype = gguf.GGMLQuantizationType.TL2
@@ -1204,7 +1212,11 @@ class BitnetModel(Model):
 
                 self.gguf_writer.add_tensor(new_name, data, raw_shape=shape, raw_dtype=data_qtype)
                 if i2_scale is not None:
-                    self.gguf_writer.add_tensor(new_name + "_scale", i2_scale, raw_dtype=gguf.GGMLQuantizationType.F32)
+                    # llama.cpp looks up the per-tensor TL1/TL2 scale as "<layer>.scale"
+                    # (see tn(LLM_TENSOR_*, "scale", i) in bitnet.cpp), not "<name>.weight_scale".
+                    assert new_name.endswith(".weight")
+                    scale_name = new_name[: -len(".weight")] + ".scale"
+                    self.gguf_writer.add_tensor(scale_name, i2_scale, raw_dtype=gguf.GGMLQuantizationType.F32)
 
 
 ###### CONVERSION LOGIC ######

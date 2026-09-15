@@ -105,7 +105,7 @@ inline int32_t partial_max_reset(int32_t bs, void* lut_scales_) {\n\
 template<int act_k>\n\
 inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_scales) {\n\
 #if defined __AVX2__\n\
-    __m256i vec_lut[16];\n\
+    __m256 vec_lut[16];\n\
     const __m256i vec_bi = _mm256_set_epi32(84, 72, 60, 48, 36, 24, 12, 0);\n\
     float scales = *lut_scales;\n\
     __m256i shuffle_mask = _mm256_set_epi8(\n\
@@ -191,7 +191,7 @@ inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_t
 template<int act_k>\n\
 inline int32_t two_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_scales) {\n\
 #if defined __AVX2__\n\
-    __m256i vec_lut[16];\n\
+    __m256 vec_lut[16];\n\
     const __m256i vec_bi = _mm256_set_epi32(56, 48, 40, 32, 24, 16, 8, 0);\n\
     float scales = *lut_scales;\n\
     __m256i shuffle_mask = _mm256_set_epi8(\n\
@@ -501,7 +501,7 @@ int32_t three_qgemm_lut_{0}(void* A, void* sign, void* LUT, void* Scales, void* 
     for (int bs = 0; bs < BATCH_SIZE; bs++) {{\n\
 #pragma unroll\n\
         for (int i = 0; i < BM{0}; i++) {{\n\
-            ((int32_t*)C)[i] = (int32_t)(((int32_t*)CBits)[i + bs * BM{0}]);\n\
+            ((int32_t*)C)[i + bs * BM{0}] = (int32_t)(((int32_t*)CBits)[i + bs * BM{0}]);\n\
         }}\n\
   }}\n\
   return 0;\n\
@@ -519,8 +519,8 @@ int32_t two_qgemm_lut_{0}(void* A, void* LUT, void* Scales, void* LUT_Scales, vo
     for (int bs = 0; bs < BATCH_SIZE; bs++) {{\n\
 #pragma unroll\n\
         for (int i = 0; i < BM{0}; i++) {{\n\
-            ((int32_t*)C)[i] += (int32_t)(((int32_t*)CBits)[i + bs * BM{0}]);\n\
-            ((float*)C)[i] = (float)(((int32_t*)C)[i]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];\n\
+            ((int32_t*)C)[i + bs * BM{0}] += (int32_t)(((int32_t*)CBits)[i + bs * BM{0}]);\n\
+            ((float*)C)[i + bs * BM{0}] = (float)(((int32_t*)C)[i + bs * BM{0}]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];\n\
         }}\n\
     }}\n\
   return 0;\n\
@@ -626,7 +626,7 @@ def gen_top_api(kernel_shapes, k_list):
 def gen_transform_code(kernel_shapes):
     kernel_code = "\n\
 void ggml_bitnet_transform_tensor(struct ggml_tensor * tensor) {\n\
-    if (!(is_type_supported(tensor->type) && tensor->backend == GGML_BACKEND_TYPE_CPU && tensor->extra == nullptr)) {\n\
+    if (!(is_type_supported(tensor->type) && tensor->extra == nullptr)) {\n\
         return;\n\
     }\n\
 \n\
@@ -656,10 +656,10 @@ void ggml_bitnet_transform_tensor(struct ggml_tensor * tensor) {\n\
 \n\
     scales = (bitnet_float_type *) aligned_malloc(sizeof(bitnet_float_type));\n\
     qweights = (uint8_t *) tensor->data;\n\
-    int nbytes = (k - 256) * m / 3 * 5 / 8 + 256 * m / 2 * 4 / 8;\n\
-    if (nbytes % 32 != 0) nbytes = 32 - nbytes % 32 + nbytes;\n\
-    float * i2_scales = (float * )(qweights + nbytes);\n\
-    scales[0] = (bitnet_float_type) i2_scales[0];\n\
+    // The real per-tensor scale is loaded separately as the \"<layer>.scale\" GGUF\n\
+    // tensor and applied by build_lora_mm() in the graph; qweights holds only the\n\
+    // packed ternary/sign data here, so this stays the identity.\n\
+    scales[0] = (bitnet_float_type) 1.0f;\n\
 \n\
     tensor->extra = bitnet_tensor_extras + bitnet_tensor_extras_index;\n\
     bitnet_tensor_extras[bitnet_tensor_extras_index++] = {\n\
@@ -690,7 +690,12 @@ if __name__ == "__main__":
         "Llama3-8B-1.58-100B-tokens"        : [[14336, 4096],
                                                [4096, 14336],
                                                [1024, 4096],
-                                               [4096, 4096]] 
+                                               [4096, 4096]],
+        # attn_q/attn_output, attn_k/attn_v, ffn_gate/ffn_up, ffn_down
+        "BitNet-b1.58-2B-4T"                : [[2560, 2560],
+                                               [640, 2560],
+                                               [6912, 2560],
+                                               [2560, 6912]]
     }
 
     parser = argparse.ArgumentParser(description='gen impl')

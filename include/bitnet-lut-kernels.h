@@ -100,7 +100,7 @@ inline int32_t partial_max_reset(int32_t bs, void* lut_scales_) {
 template<int act_k>
 inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_scales) {
 #if defined __AVX2__
-    __m256i vec_lut[16];
+    __m256 vec_lut[16];
     const __m256i vec_bi = _mm256_set_epi32(84, 72, 60, 48, 36, 24, 12, 0);
     float scales = *lut_scales;
     __m256i shuffle_mask = _mm256_set_epi8(
@@ -186,7 +186,7 @@ inline int32_t three_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_t
 template<int act_k>
 inline int32_t two_lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_scales) {
 #if defined __AVX2__
-    __m256i vec_lut[16];
+    __m256 vec_lut[16];
     const __m256i vec_bi = _mm256_set_epi32(56, 48, 40, 32, 24, 16, 8, 0);
     float scales = *lut_scales;
     __m256i shuffle_mask = _mm256_set_epi8(
@@ -270,18 +270,18 @@ static bool is_type_supported(enum ggml_type type) {
 }
 #include <immintrin.h>
 
-#define BM3200_8640 160
-#define BBK3200_8640 96
+#define BM2560_2560 256
+#define BBK2560_2560 96
 template<int batch_size, int K3>
-inline void three_tbl_impl_3200_8640(int32_t* c, int8_t* lut, uint8_t* a, uint8_t* sign) {
+inline void three_tbl_impl_2560_2560(int32_t* c, int8_t* lut, uint8_t* a, uint8_t* sign) {
 #ifdef __AVX2__
     const __m256i vec_mask = _mm256_set1_epi8(0x0f);
     const __m256i vec_sign_mask  = _mm256_set1_epi16(0x8000);
     const __m256i vec_zero  = _mm256_set1_epi8(0x00);
     const __m256i vec_one  = _mm256_set1_epi8(0xff);
-    const int KK = BBK3200_8640 / 3;
+    const int KK = BBK2560_2560 / 3;
 #pragma unroll
-        for (int i = 0; i < BM3200_8640; i += 32) {
+        for (int i = 0; i < BM2560_2560; i += 32) {
         __m256i vec_as[KK / 2];
         __m256i vec_signs[KK / 8];
         #pragma unroll
@@ -392,30 +392,30 @@ inline void three_tbl_impl_3200_8640(int32_t* c, int8_t* lut, uint8_t* a, uint8_
                 vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_3);
                 vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_3);
         }
-        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_8640 * bs));
-        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_8640 * bs));
-        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_8640 * bs));
-        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_8640 * bs));
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_2560 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_2560 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_2560 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_2560 * bs));
         vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
         vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
         vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
         vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_8640 * bs), vec_gc0);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_8640 * bs), vec_gc1);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_8640 * bs), vec_gc2);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_8640 * bs), vec_gc3);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_2560 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_2560 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_2560 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_2560 * bs), vec_gc3);
     }
     }
 #endif
 }
 
 template<int batch_size, int K2>
-inline int32_t two_tbl_impl3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
+inline int32_t two_tbl_impl2560_2560(int32_t* c, int8_t* lut, uint8_t* a) {
 #ifdef __AVX2__
     const __m256i vec_mask = _mm256_set1_epi8(0x0f);
     const int KK = BK2 / 2;
 #pragma unroll
-    for (int i = 0; i < BM3200_8640; i += 32) {
+    for (int i = 0; i < BM2560_2560; i += 32) {
         __m256i vec_as[KK / 2];
         #pragma unroll
         for (int ai = 0; ai < KK / 2; ai++) {
@@ -455,20 +455,20 @@ inline int32_t two_tbl_impl3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
             }
         }
 
-        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_8640 * bs));
-        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_8640 * bs));
-        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_8640 * bs));
-        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_8640 * bs));
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_2560 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_2560 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_2560 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_2560 * bs));
 
         vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
         vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
         vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
         vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
 
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_8640 * bs), vec_gc0);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_8640 * bs), vec_gc1);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_8640 * bs), vec_gc2);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_8640 * bs), vec_gc3);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_2560 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_2560 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_2560 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_2560 * bs), vec_gc3);
     }
     }
 #endif
@@ -476,525 +476,769 @@ inline int32_t two_tbl_impl3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
 }
 
 template<int BATCH_SIZE>
-int32_t three_qgemm_lut_3200_8640(void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
-    alignas(32) uint32_t CBits[BATCH_SIZE * BM3200_8640];
-    memset(&(CBits[0]), 0, BATCH_SIZE * BM3200_8640 * sizeof(int32_t));
+int32_t three_qgemm_lut_2560_2560(void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM2560_2560];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM2560_2560 * sizeof(int32_t));
 #pragma unroll
-    for (int32_t k_outer = 0; k_outer < 8640 / BBK3200_8640; ++k_outer) {
-        three_tbl_impl_3200_8640<BATCH_SIZE, 8640>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BBK3200_8640 / 3 * 32)])), (&(((uint8_t*)A)[(k_outer * BBK3200_8640 / 3 / 2 * BM3200_8640)])), (&(((uint8_t*)sign)[(k_outer * BBK3200_8640 / 3 / 8 * BM3200_8640)])));
+    for (int32_t k_outer = 0; k_outer < 2496 / BBK2560_2560; ++k_outer) {
+        three_tbl_impl_2560_2560<BATCH_SIZE, 2496>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BBK2560_2560 / 3 * 32)])), (&(((uint8_t*)A)[(k_outer * BBK2560_2560 / 3 / 2 * BM2560_2560)])), (&(((uint8_t*)sign)[(k_outer * BBK2560_2560 / 3 / 8 * BM2560_2560)])));
     }
 #pragma unroll
     for (int bs = 0; bs < BATCH_SIZE; bs++) {
 #pragma unroll
-        for (int i = 0; i < BM3200_8640; i++) {
-            ((int32_t*)C)[i] = (int32_t)(((int32_t*)CBits)[i + bs * BM3200_8640]);
+        for (int i = 0; i < BM2560_2560; i++) {
+            ((int32_t*)C)[i + bs * BM2560_2560] = (int32_t)(((int32_t*)CBits)[i + bs * BM2560_2560]);
         }
   }
   return 0;
 }
 
 template<int BATCH_SIZE>
-int32_t two_qgemm_lut_3200_8640(void* A, void* LUT, void* Scales, void* LUT_Scales, void* C) {
-    alignas(32) uint32_t CBits[BATCH_SIZE * BM3200_8640];
-    memset(&(CBits[0]), 0, BATCH_SIZE * BM3200_8640 * sizeof(int32_t));
+int32_t two_qgemm_lut_2560_2560(void* A, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM2560_2560];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM2560_2560 * sizeof(int32_t));
+#pragma unroll
+    for (int32_t k_outer = 0; k_outer < 64 / 32; ++k_outer) {
+        two_tbl_impl2560_2560<BATCH_SIZE, 64>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BK2 / 2 * 32)])), (&(((uint8_t*)A)[(k_outer * BK2 / 2 / 2 * BM2560_2560)])));
+    }
+#pragma unroll
+    for (int bs = 0; bs < BATCH_SIZE; bs++) {
+#pragma unroll
+        for (int i = 0; i < BM2560_2560; i++) {
+            ((int32_t*)C)[i + bs * BM2560_2560] += (int32_t)(((int32_t*)CBits)[i + bs * BM2560_2560]);
+            ((float*)C)[i + bs * BM2560_2560] = (float)(((int32_t*)C)[i + bs * BM2560_2560]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];
+        }
+    }
+  return 0;
+}
+
+#include <immintrin.h>
+
+#define BM640_2560 128
+#define BBK640_2560 96
+template<int batch_size, int K3>
+inline void three_tbl_impl_640_2560(int32_t* c, int8_t* lut, uint8_t* a, uint8_t* sign) {
+#ifdef __AVX2__
+    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
+    const __m256i vec_sign_mask  = _mm256_set1_epi16(0x8000);
+    const __m256i vec_zero  = _mm256_set1_epi8(0x00);
+    const __m256i vec_one  = _mm256_set1_epi8(0xff);
+    const int KK = BBK640_2560 / 3;
+#pragma unroll
+        for (int i = 0; i < BM640_2560; i += 32) {
+        __m256i vec_as[KK / 2];
+        __m256i vec_signs[KK / 8];
+        #pragma unroll
+        for (int ai = 0; ai < KK / 2; ai++) {
+            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
+        }
+        #pragma unroll
+        for (int as = 0; as < KK / 8; as++) {
+            vec_signs[as] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(sign + i * KK / 8 + as * 32));
+        }
+#pragma unroll
+    for (int bs = 0; bs < batch_size; bs++) {
+        __m256i vec_c0 = _mm256_setzero_si256();
+        __m256i vec_c1 = _mm256_setzero_si256();
+#pragma unroll
+        for (int k = 0; k < KK / 8; k++) {
+            __m256i vec_sign = vec_signs[k];
+                __m256i vec_a_0 = vec_as[k * 4 + 0];
+                __m128i vec_k1_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0)), 15);
+                __m256i vec_sign_left_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 1)), 15);
+                __m256i vec_v_top_0 = _mm256_and_si256(_mm256_srli_epi16(vec_a_0, 4), vec_mask);
+                __m256i vec_v_top_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_0, vec_k1_0), vec_v_top_0);
+                __m256i vec_v_top_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_0, vec_k2_0), vec_v_top_0);
+                __m256i vec_sign_right_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 2)), 15);
+                __m256i vec_sign_right_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 3)), 15);
+                __m256i vec_v_bot_0 = _mm256_and_si256(vec_a_0, vec_mask);
+                __m256i vec_v_bot_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_0, vec_k3_0), vec_v_bot_0);
+                __m256i vec_v_bot_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_0, vec_k4_0), vec_v_bot_0);
+                __m256i vec_v_top_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_lo_0), vec_sign_left_lo_0);
+                __m256i vec_v_top_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_hi_0), vec_sign_left_hi_0);
+                __m256i vec_v_bot_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_lo_0), vec_sign_right_lo_0);
+                __m256i vec_v_bot_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_hi_0), vec_sign_right_hi_0);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_0);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_0);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_0);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_0);
+                __m256i vec_a_1 = vec_as[k * 4 + 1];
+                __m128i vec_k1_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1)), 15);
+                __m256i vec_sign_left_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 1)), 15);
+                __m256i vec_v_top_1 = _mm256_and_si256(_mm256_srli_epi16(vec_a_1, 4), vec_mask);
+                __m256i vec_v_top_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_1, vec_k1_1), vec_v_top_1);
+                __m256i vec_v_top_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_1, vec_k2_1), vec_v_top_1);
+                __m256i vec_sign_right_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 2)), 15);
+                __m256i vec_sign_right_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 3)), 15);
+                __m256i vec_v_bot_1 = _mm256_and_si256(vec_a_1, vec_mask);
+                __m256i vec_v_bot_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_1, vec_k3_1), vec_v_bot_1);
+                __m256i vec_v_bot_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_1, vec_k4_1), vec_v_bot_1);
+                __m256i vec_v_top_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_lo_1), vec_sign_left_lo_1);
+                __m256i vec_v_top_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_hi_1), vec_sign_left_hi_1);
+                __m256i vec_v_bot_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_lo_1), vec_sign_right_lo_1);
+                __m256i vec_v_bot_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_hi_1), vec_sign_right_hi_1);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_1);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_1);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_1);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_1);
+                __m256i vec_a_2 = vec_as[k * 4 + 2];
+                __m128i vec_k1_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2)), 15);
+                __m256i vec_sign_left_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 1)), 15);
+                __m256i vec_v_top_2 = _mm256_and_si256(_mm256_srli_epi16(vec_a_2, 4), vec_mask);
+                __m256i vec_v_top_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_2, vec_k1_2), vec_v_top_2);
+                __m256i vec_v_top_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_2, vec_k2_2), vec_v_top_2);
+                __m256i vec_sign_right_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 2)), 15);
+                __m256i vec_sign_right_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 3)), 15);
+                __m256i vec_v_bot_2 = _mm256_and_si256(vec_a_2, vec_mask);
+                __m256i vec_v_bot_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_2, vec_k3_2), vec_v_bot_2);
+                __m256i vec_v_bot_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_2, vec_k4_2), vec_v_bot_2);
+                __m256i vec_v_top_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_lo_2), vec_sign_left_lo_2);
+                __m256i vec_v_top_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_hi_2), vec_sign_left_hi_2);
+                __m256i vec_v_bot_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_lo_2), vec_sign_right_lo_2);
+                __m256i vec_v_bot_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_hi_2), vec_sign_right_hi_2);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_2);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_2);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_2);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_2);
+                __m256i vec_a_3 = vec_as[k * 4 + 3];
+                __m128i vec_k1_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3)), 15);
+                __m256i vec_sign_left_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 1)), 15);
+                __m256i vec_v_top_3 = _mm256_and_si256(_mm256_srli_epi16(vec_a_3, 4), vec_mask);
+                __m256i vec_v_top_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_3, vec_k1_3), vec_v_top_3);
+                __m256i vec_v_top_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_3, vec_k2_3), vec_v_top_3);
+                __m256i vec_sign_right_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 2)), 15);
+                __m256i vec_sign_right_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 3)), 15);
+                __m256i vec_v_bot_3 = _mm256_and_si256(vec_a_3, vec_mask);
+                __m256i vec_v_bot_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_3, vec_k3_3), vec_v_bot_3);
+                __m256i vec_v_bot_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_3, vec_k4_3), vec_v_bot_3);
+                __m256i vec_v_top_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_lo_3), vec_sign_left_lo_3);
+                __m256i vec_v_top_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_hi_3), vec_sign_left_hi_3);
+                __m256i vec_v_bot_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_lo_3), vec_sign_right_lo_3);
+                __m256i vec_v_bot_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_hi_3), vec_sign_right_hi_3);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_3);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_3);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_3);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_3);
+        }
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM640_2560 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM640_2560 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM640_2560 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM640_2560 * bs));
+        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
+        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
+        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
+        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM640_2560 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM640_2560 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM640_2560 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM640_2560 * bs), vec_gc3);
+    }
+    }
+#endif
+}
+
+template<int batch_size, int K2>
+inline int32_t two_tbl_impl640_2560(int32_t* c, int8_t* lut, uint8_t* a) {
+#ifdef __AVX2__
+    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
+    const int KK = BK2 / 2;
+#pragma unroll
+    for (int i = 0; i < BM640_2560; i += 32) {
+        __m256i vec_as[KK / 2];
+        #pragma unroll
+        for (int ai = 0; ai < KK / 2; ai++) {
+            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
+        }
+#pragma unroll
+    for (int bs = 0; bs < batch_size; bs++) {
+        __m256i vec_c0 = _mm256_setzero_si256();
+        __m256i vec_c1 = _mm256_setzero_si256();
+#pragma unroll
+        for (int k = 0; k < KK / 8; k++) {
+            #pragma unroll
+            for (int j = 0; j < 4; j++) {
+                __m256i vec_a = vec_as[k * 4 + j];
+
+                __m128i vec_k1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 0  + K2 / 2 * 32 * bs));
+                __m128i vec_k2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 16 + K2 / 2 * 32 * bs));
+                __m128i vec_k3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 32 + K2 / 2 * 32 * bs));
+                __m128i vec_k4 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 48 + K2 / 2 * 32 * bs));
+
+                __m256i vec_v_top = _mm256_and_si256(_mm256_srli_epi16(vec_a, 4), vec_mask);
+                __m256i vec_v_top_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1, vec_k1), vec_v_top);
+                __m256i vec_v_top_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2, vec_k2), vec_v_top);
+
+                __m256i vec_v_bot = _mm256_and_si256(vec_a, vec_mask);
+                __m256i vec_v_bot_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3, vec_k3), vec_v_bot);
+                __m256i vec_v_bot_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4, vec_k4), vec_v_bot);
+
+                __m256i vec_v_top_lo = _mm256_unpackhi_epi8(vec_v_top_fir, vec_v_top_sec);
+                __m256i vec_v_top_hi = _mm256_unpacklo_epi8(vec_v_top_fir, vec_v_top_sec);
+                __m256i vec_v_bot_lo = _mm256_unpackhi_epi8(vec_v_bot_fir, vec_v_bot_sec);
+                __m256i vec_v_bot_hi = _mm256_unpacklo_epi8(vec_v_bot_fir, vec_v_bot_sec);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo); 
+            }
+        }
+
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM640_2560 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM640_2560 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM640_2560 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM640_2560 * bs));
+
+        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
+        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
+        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
+        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
+
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM640_2560 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM640_2560 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM640_2560 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM640_2560 * bs), vec_gc3);
+    }
+    }
+#endif
+    return 0;
+}
+
+template<int BATCH_SIZE>
+int32_t three_qgemm_lut_640_2560(void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM640_2560];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM640_2560 * sizeof(int32_t));
+#pragma unroll
+    for (int32_t k_outer = 0; k_outer < 2496 / BBK640_2560; ++k_outer) {
+        three_tbl_impl_640_2560<BATCH_SIZE, 2496>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BBK640_2560 / 3 * 32)])), (&(((uint8_t*)A)[(k_outer * BBK640_2560 / 3 / 2 * BM640_2560)])), (&(((uint8_t*)sign)[(k_outer * BBK640_2560 / 3 / 8 * BM640_2560)])));
+    }
+#pragma unroll
+    for (int bs = 0; bs < BATCH_SIZE; bs++) {
+#pragma unroll
+        for (int i = 0; i < BM640_2560; i++) {
+            ((int32_t*)C)[i + bs * BM640_2560] = (int32_t)(((int32_t*)CBits)[i + bs * BM640_2560]);
+        }
+  }
+  return 0;
+}
+
+template<int BATCH_SIZE>
+int32_t two_qgemm_lut_640_2560(void* A, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM640_2560];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM640_2560 * sizeof(int32_t));
+#pragma unroll
+    for (int32_t k_outer = 0; k_outer < 64 / 32; ++k_outer) {
+        two_tbl_impl640_2560<BATCH_SIZE, 64>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BK2 / 2 * 32)])), (&(((uint8_t*)A)[(k_outer * BK2 / 2 / 2 * BM640_2560)])));
+    }
+#pragma unroll
+    for (int bs = 0; bs < BATCH_SIZE; bs++) {
+#pragma unroll
+        for (int i = 0; i < BM640_2560; i++) {
+            ((int32_t*)C)[i + bs * BM640_2560] += (int32_t)(((int32_t*)CBits)[i + bs * BM640_2560]);
+            ((float*)C)[i + bs * BM640_2560] = (float)(((int32_t*)C)[i + bs * BM640_2560]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];
+        }
+    }
+  return 0;
+}
+
+#include <immintrin.h>
+
+#define BM6912_2560 256
+#define BBK6912_2560 96
+template<int batch_size, int K3>
+inline void three_tbl_impl_6912_2560(int32_t* c, int8_t* lut, uint8_t* a, uint8_t* sign) {
+#ifdef __AVX2__
+    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
+    const __m256i vec_sign_mask  = _mm256_set1_epi16(0x8000);
+    const __m256i vec_zero  = _mm256_set1_epi8(0x00);
+    const __m256i vec_one  = _mm256_set1_epi8(0xff);
+    const int KK = BBK6912_2560 / 3;
+#pragma unroll
+        for (int i = 0; i < BM6912_2560; i += 32) {
+        __m256i vec_as[KK / 2];
+        __m256i vec_signs[KK / 8];
+        #pragma unroll
+        for (int ai = 0; ai < KK / 2; ai++) {
+            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
+        }
+        #pragma unroll
+        for (int as = 0; as < KK / 8; as++) {
+            vec_signs[as] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(sign + i * KK / 8 + as * 32));
+        }
+#pragma unroll
+    for (int bs = 0; bs < batch_size; bs++) {
+        __m256i vec_c0 = _mm256_setzero_si256();
+        __m256i vec_c1 = _mm256_setzero_si256();
+#pragma unroll
+        for (int k = 0; k < KK / 8; k++) {
+            __m256i vec_sign = vec_signs[k];
+                __m256i vec_a_0 = vec_as[k * 4 + 0];
+                __m128i vec_k1_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0)), 15);
+                __m256i vec_sign_left_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 1)), 15);
+                __m256i vec_v_top_0 = _mm256_and_si256(_mm256_srli_epi16(vec_a_0, 4), vec_mask);
+                __m256i vec_v_top_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_0, vec_k1_0), vec_v_top_0);
+                __m256i vec_v_top_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_0, vec_k2_0), vec_v_top_0);
+                __m256i vec_sign_right_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 2)), 15);
+                __m256i vec_sign_right_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 3)), 15);
+                __m256i vec_v_bot_0 = _mm256_and_si256(vec_a_0, vec_mask);
+                __m256i vec_v_bot_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_0, vec_k3_0), vec_v_bot_0);
+                __m256i vec_v_bot_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_0, vec_k4_0), vec_v_bot_0);
+                __m256i vec_v_top_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_lo_0), vec_sign_left_lo_0);
+                __m256i vec_v_top_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_hi_0), vec_sign_left_hi_0);
+                __m256i vec_v_bot_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_lo_0), vec_sign_right_lo_0);
+                __m256i vec_v_bot_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_hi_0), vec_sign_right_hi_0);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_0);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_0);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_0);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_0);
+                __m256i vec_a_1 = vec_as[k * 4 + 1];
+                __m128i vec_k1_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1)), 15);
+                __m256i vec_sign_left_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 1)), 15);
+                __m256i vec_v_top_1 = _mm256_and_si256(_mm256_srli_epi16(vec_a_1, 4), vec_mask);
+                __m256i vec_v_top_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_1, vec_k1_1), vec_v_top_1);
+                __m256i vec_v_top_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_1, vec_k2_1), vec_v_top_1);
+                __m256i vec_sign_right_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 2)), 15);
+                __m256i vec_sign_right_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 3)), 15);
+                __m256i vec_v_bot_1 = _mm256_and_si256(vec_a_1, vec_mask);
+                __m256i vec_v_bot_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_1, vec_k3_1), vec_v_bot_1);
+                __m256i vec_v_bot_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_1, vec_k4_1), vec_v_bot_1);
+                __m256i vec_v_top_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_lo_1), vec_sign_left_lo_1);
+                __m256i vec_v_top_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_hi_1), vec_sign_left_hi_1);
+                __m256i vec_v_bot_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_lo_1), vec_sign_right_lo_1);
+                __m256i vec_v_bot_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_hi_1), vec_sign_right_hi_1);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_1);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_1);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_1);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_1);
+                __m256i vec_a_2 = vec_as[k * 4 + 2];
+                __m128i vec_k1_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2)), 15);
+                __m256i vec_sign_left_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 1)), 15);
+                __m256i vec_v_top_2 = _mm256_and_si256(_mm256_srli_epi16(vec_a_2, 4), vec_mask);
+                __m256i vec_v_top_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_2, vec_k1_2), vec_v_top_2);
+                __m256i vec_v_top_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_2, vec_k2_2), vec_v_top_2);
+                __m256i vec_sign_right_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 2)), 15);
+                __m256i vec_sign_right_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 3)), 15);
+                __m256i vec_v_bot_2 = _mm256_and_si256(vec_a_2, vec_mask);
+                __m256i vec_v_bot_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_2, vec_k3_2), vec_v_bot_2);
+                __m256i vec_v_bot_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_2, vec_k4_2), vec_v_bot_2);
+                __m256i vec_v_top_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_lo_2), vec_sign_left_lo_2);
+                __m256i vec_v_top_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_hi_2), vec_sign_left_hi_2);
+                __m256i vec_v_bot_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_lo_2), vec_sign_right_lo_2);
+                __m256i vec_v_bot_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_hi_2), vec_sign_right_hi_2);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_2);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_2);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_2);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_2);
+                __m256i vec_a_3 = vec_as[k * 4 + 3];
+                __m128i vec_k1_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3)), 15);
+                __m256i vec_sign_left_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 1)), 15);
+                __m256i vec_v_top_3 = _mm256_and_si256(_mm256_srli_epi16(vec_a_3, 4), vec_mask);
+                __m256i vec_v_top_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_3, vec_k1_3), vec_v_top_3);
+                __m256i vec_v_top_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_3, vec_k2_3), vec_v_top_3);
+                __m256i vec_sign_right_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 2)), 15);
+                __m256i vec_sign_right_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 3)), 15);
+                __m256i vec_v_bot_3 = _mm256_and_si256(vec_a_3, vec_mask);
+                __m256i vec_v_bot_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_3, vec_k3_3), vec_v_bot_3);
+                __m256i vec_v_bot_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_3, vec_k4_3), vec_v_bot_3);
+                __m256i vec_v_top_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_lo_3), vec_sign_left_lo_3);
+                __m256i vec_v_top_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_hi_3), vec_sign_left_hi_3);
+                __m256i vec_v_bot_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_lo_3), vec_sign_right_lo_3);
+                __m256i vec_v_bot_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_hi_3), vec_sign_right_hi_3);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_3);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_3);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_3);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_3);
+        }
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM6912_2560 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM6912_2560 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM6912_2560 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM6912_2560 * bs));
+        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
+        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
+        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
+        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM6912_2560 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM6912_2560 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM6912_2560 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM6912_2560 * bs), vec_gc3);
+    }
+    }
+#endif
+}
+
+template<int batch_size, int K2>
+inline int32_t two_tbl_impl6912_2560(int32_t* c, int8_t* lut, uint8_t* a) {
+#ifdef __AVX2__
+    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
+    const int KK = BK2 / 2;
+#pragma unroll
+    for (int i = 0; i < BM6912_2560; i += 32) {
+        __m256i vec_as[KK / 2];
+        #pragma unroll
+        for (int ai = 0; ai < KK / 2; ai++) {
+            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
+        }
+#pragma unroll
+    for (int bs = 0; bs < batch_size; bs++) {
+        __m256i vec_c0 = _mm256_setzero_si256();
+        __m256i vec_c1 = _mm256_setzero_si256();
+#pragma unroll
+        for (int k = 0; k < KK / 8; k++) {
+            #pragma unroll
+            for (int j = 0; j < 4; j++) {
+                __m256i vec_a = vec_as[k * 4 + j];
+
+                __m128i vec_k1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 0  + K2 / 2 * 32 * bs));
+                __m128i vec_k2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 16 + K2 / 2 * 32 * bs));
+                __m128i vec_k3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 32 + K2 / 2 * 32 * bs));
+                __m128i vec_k4 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 48 + K2 / 2 * 32 * bs));
+
+                __m256i vec_v_top = _mm256_and_si256(_mm256_srli_epi16(vec_a, 4), vec_mask);
+                __m256i vec_v_top_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1, vec_k1), vec_v_top);
+                __m256i vec_v_top_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2, vec_k2), vec_v_top);
+
+                __m256i vec_v_bot = _mm256_and_si256(vec_a, vec_mask);
+                __m256i vec_v_bot_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3, vec_k3), vec_v_bot);
+                __m256i vec_v_bot_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4, vec_k4), vec_v_bot);
+
+                __m256i vec_v_top_lo = _mm256_unpackhi_epi8(vec_v_top_fir, vec_v_top_sec);
+                __m256i vec_v_top_hi = _mm256_unpacklo_epi8(vec_v_top_fir, vec_v_top_sec);
+                __m256i vec_v_bot_lo = _mm256_unpackhi_epi8(vec_v_bot_fir, vec_v_bot_sec);
+                __m256i vec_v_bot_hi = _mm256_unpacklo_epi8(vec_v_bot_fir, vec_v_bot_sec);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo); 
+            }
+        }
+
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM6912_2560 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM6912_2560 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM6912_2560 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM6912_2560 * bs));
+
+        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
+        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
+        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
+        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
+
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM6912_2560 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM6912_2560 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM6912_2560 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM6912_2560 * bs), vec_gc3);
+    }
+    }
+#endif
+    return 0;
+}
+
+template<int BATCH_SIZE>
+int32_t three_qgemm_lut_6912_2560(void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM6912_2560];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM6912_2560 * sizeof(int32_t));
+#pragma unroll
+    for (int32_t k_outer = 0; k_outer < 2496 / BBK6912_2560; ++k_outer) {
+        three_tbl_impl_6912_2560<BATCH_SIZE, 2496>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BBK6912_2560 / 3 * 32)])), (&(((uint8_t*)A)[(k_outer * BBK6912_2560 / 3 / 2 * BM6912_2560)])), (&(((uint8_t*)sign)[(k_outer * BBK6912_2560 / 3 / 8 * BM6912_2560)])));
+    }
+#pragma unroll
+    for (int bs = 0; bs < BATCH_SIZE; bs++) {
+#pragma unroll
+        for (int i = 0; i < BM6912_2560; i++) {
+            ((int32_t*)C)[i + bs * BM6912_2560] = (int32_t)(((int32_t*)CBits)[i + bs * BM6912_2560]);
+        }
+  }
+  return 0;
+}
+
+template<int BATCH_SIZE>
+int32_t two_qgemm_lut_6912_2560(void* A, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM6912_2560];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM6912_2560 * sizeof(int32_t));
+#pragma unroll
+    for (int32_t k_outer = 0; k_outer < 64 / 32; ++k_outer) {
+        two_tbl_impl6912_2560<BATCH_SIZE, 64>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BK2 / 2 * 32)])), (&(((uint8_t*)A)[(k_outer * BK2 / 2 / 2 * BM6912_2560)])));
+    }
+#pragma unroll
+    for (int bs = 0; bs < BATCH_SIZE; bs++) {
+#pragma unroll
+        for (int i = 0; i < BM6912_2560; i++) {
+            ((int32_t*)C)[i + bs * BM6912_2560] += (int32_t)(((int32_t*)CBits)[i + bs * BM6912_2560]);
+            ((float*)C)[i + bs * BM6912_2560] = (float)(((int32_t*)C)[i + bs * BM6912_2560]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];
+        }
+    }
+  return 0;
+}
+
+#include <immintrin.h>
+
+#define BM2560_6912 256
+#define BBK2560_6912 96
+template<int batch_size, int K3>
+inline void three_tbl_impl_2560_6912(int32_t* c, int8_t* lut, uint8_t* a, uint8_t* sign) {
+#ifdef __AVX2__
+    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
+    const __m256i vec_sign_mask  = _mm256_set1_epi16(0x8000);
+    const __m256i vec_zero  = _mm256_set1_epi8(0x00);
+    const __m256i vec_one  = _mm256_set1_epi8(0xff);
+    const int KK = BBK2560_6912 / 3;
+#pragma unroll
+        for (int i = 0; i < BM2560_6912; i += 32) {
+        __m256i vec_as[KK / 2];
+        __m256i vec_signs[KK / 8];
+        #pragma unroll
+        for (int ai = 0; ai < KK / 2; ai++) {
+            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
+        }
+        #pragma unroll
+        for (int as = 0; as < KK / 8; as++) {
+            vec_signs[as] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(sign + i * KK / 8 + as * 32));
+        }
+#pragma unroll
+    for (int bs = 0; bs < batch_size; bs++) {
+        __m256i vec_c0 = _mm256_setzero_si256();
+        __m256i vec_c1 = _mm256_setzero_si256();
+#pragma unroll
+        for (int k = 0; k < KK / 8; k++) {
+            __m256i vec_sign = vec_signs[k];
+                __m256i vec_a_0 = vec_as[k * 4 + 0];
+                __m128i vec_k1_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0)), 15);
+                __m256i vec_sign_left_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 1)), 15);
+                __m256i vec_v_top_0 = _mm256_and_si256(_mm256_srli_epi16(vec_a_0, 4), vec_mask);
+                __m256i vec_v_top_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_0, vec_k1_0), vec_v_top_0);
+                __m256i vec_v_top_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_0, vec_k2_0), vec_v_top_0);
+                __m256i vec_sign_right_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 2)), 15);
+                __m256i vec_sign_right_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 3)), 15);
+                __m256i vec_v_bot_0 = _mm256_and_si256(vec_a_0, vec_mask);
+                __m256i vec_v_bot_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_0, vec_k3_0), vec_v_bot_0);
+                __m256i vec_v_bot_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_0, vec_k4_0), vec_v_bot_0);
+                __m256i vec_v_top_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_lo_0), vec_sign_left_lo_0);
+                __m256i vec_v_top_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_hi_0), vec_sign_left_hi_0);
+                __m256i vec_v_bot_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_lo_0), vec_sign_right_lo_0);
+                __m256i vec_v_bot_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_hi_0), vec_sign_right_hi_0);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_0);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_0);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_0);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_0);
+                __m256i vec_a_1 = vec_as[k * 4 + 1];
+                __m128i vec_k1_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1)), 15);
+                __m256i vec_sign_left_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 1)), 15);
+                __m256i vec_v_top_1 = _mm256_and_si256(_mm256_srli_epi16(vec_a_1, 4), vec_mask);
+                __m256i vec_v_top_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_1, vec_k1_1), vec_v_top_1);
+                __m256i vec_v_top_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_1, vec_k2_1), vec_v_top_1);
+                __m256i vec_sign_right_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 2)), 15);
+                __m256i vec_sign_right_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 3)), 15);
+                __m256i vec_v_bot_1 = _mm256_and_si256(vec_a_1, vec_mask);
+                __m256i vec_v_bot_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_1, vec_k3_1), vec_v_bot_1);
+                __m256i vec_v_bot_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_1, vec_k4_1), vec_v_bot_1);
+                __m256i vec_v_top_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_lo_1), vec_sign_left_lo_1);
+                __m256i vec_v_top_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_hi_1), vec_sign_left_hi_1);
+                __m256i vec_v_bot_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_lo_1), vec_sign_right_lo_1);
+                __m256i vec_v_bot_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_hi_1), vec_sign_right_hi_1);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_1);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_1);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_1);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_1);
+                __m256i vec_a_2 = vec_as[k * 4 + 2];
+                __m128i vec_k1_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2)), 15);
+                __m256i vec_sign_left_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 1)), 15);
+                __m256i vec_v_top_2 = _mm256_and_si256(_mm256_srli_epi16(vec_a_2, 4), vec_mask);
+                __m256i vec_v_top_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_2, vec_k1_2), vec_v_top_2);
+                __m256i vec_v_top_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_2, vec_k2_2), vec_v_top_2);
+                __m256i vec_sign_right_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 2)), 15);
+                __m256i vec_sign_right_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 3)), 15);
+                __m256i vec_v_bot_2 = _mm256_and_si256(vec_a_2, vec_mask);
+                __m256i vec_v_bot_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_2, vec_k3_2), vec_v_bot_2);
+                __m256i vec_v_bot_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_2, vec_k4_2), vec_v_bot_2);
+                __m256i vec_v_top_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_lo_2), vec_sign_left_lo_2);
+                __m256i vec_v_top_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_hi_2), vec_sign_left_hi_2);
+                __m256i vec_v_bot_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_lo_2), vec_sign_right_lo_2);
+                __m256i vec_v_bot_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_hi_2), vec_sign_right_hi_2);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_2);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_2);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_2);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_2);
+                __m256i vec_a_3 = vec_as[k * 4 + 3];
+                __m128i vec_k1_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 0  + K3 / 3 * 32 * bs));
+                __m128i vec_k2_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 16 + K3 / 3 * 32 * bs));
+                __m128i vec_k3_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 32 + K3 / 3 * 32 * bs));
+                __m128i vec_k4_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 48 + K3 / 3 * 32 * bs));
+                __m256i vec_sign_left_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3)), 15);
+                __m256i vec_sign_left_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 1)), 15);
+                __m256i vec_v_top_3 = _mm256_and_si256(_mm256_srli_epi16(vec_a_3, 4), vec_mask);
+                __m256i vec_v_top_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_3, vec_k1_3), vec_v_top_3);
+                __m256i vec_v_top_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_3, vec_k2_3), vec_v_top_3);
+                __m256i vec_sign_right_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 2)), 15);
+                __m256i vec_sign_right_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 3)), 15);
+                __m256i vec_v_bot_3 = _mm256_and_si256(vec_a_3, vec_mask);
+                __m256i vec_v_bot_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_3, vec_k3_3), vec_v_bot_3);
+                __m256i vec_v_bot_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_3, vec_k4_3), vec_v_bot_3);
+                __m256i vec_v_top_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_lo_3), vec_sign_left_lo_3);
+                __m256i vec_v_top_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_hi_3), vec_sign_left_hi_3);
+                __m256i vec_v_bot_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_lo_3), vec_sign_right_lo_3);
+                __m256i vec_v_bot_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_hi_3), vec_sign_right_hi_3);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_3);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_3);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_3);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_3);
+        }
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_6912 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_6912 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_6912 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_6912 * bs));
+        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
+        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
+        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
+        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_6912 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_6912 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_6912 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_6912 * bs), vec_gc3);
+    }
+    }
+#endif
+}
+
+template<int batch_size, int K2>
+inline int32_t two_tbl_impl2560_6912(int32_t* c, int8_t* lut, uint8_t* a) {
+#ifdef __AVX2__
+    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
+    const int KK = BK2 / 2;
+#pragma unroll
+    for (int i = 0; i < BM2560_6912; i += 32) {
+        __m256i vec_as[KK / 2];
+        #pragma unroll
+        for (int ai = 0; ai < KK / 2; ai++) {
+            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
+        }
+#pragma unroll
+    for (int bs = 0; bs < batch_size; bs++) {
+        __m256i vec_c0 = _mm256_setzero_si256();
+        __m256i vec_c1 = _mm256_setzero_si256();
+#pragma unroll
+        for (int k = 0; k < KK / 8; k++) {
+            #pragma unroll
+            for (int j = 0; j < 4; j++) {
+                __m256i vec_a = vec_as[k * 4 + j];
+
+                __m128i vec_k1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 0  + K2 / 2 * 32 * bs));
+                __m128i vec_k2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 16 + K2 / 2 * 32 * bs));
+                __m128i vec_k3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 32 + K2 / 2 * 32 * bs));
+                __m128i vec_k4 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 48 + K2 / 2 * 32 * bs));
+
+                __m256i vec_v_top = _mm256_and_si256(_mm256_srli_epi16(vec_a, 4), vec_mask);
+                __m256i vec_v_top_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1, vec_k1), vec_v_top);
+                __m256i vec_v_top_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2, vec_k2), vec_v_top);
+
+                __m256i vec_v_bot = _mm256_and_si256(vec_a, vec_mask);
+                __m256i vec_v_bot_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3, vec_k3), vec_v_bot);
+                __m256i vec_v_bot_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4, vec_k4), vec_v_bot);
+
+                __m256i vec_v_top_lo = _mm256_unpackhi_epi8(vec_v_top_fir, vec_v_top_sec);
+                __m256i vec_v_top_hi = _mm256_unpacklo_epi8(vec_v_top_fir, vec_v_top_sec);
+                __m256i vec_v_bot_lo = _mm256_unpackhi_epi8(vec_v_bot_fir, vec_v_bot_sec);
+                __m256i vec_v_bot_hi = _mm256_unpacklo_epi8(vec_v_bot_fir, vec_v_bot_sec);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi);
+                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo);
+                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo); 
+            }
+        }
+
+        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_6912 * bs));
+        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_6912 * bs));
+        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_6912 * bs));
+        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_6912 * bs));
+
+        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
+        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
+        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
+        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
+
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM2560_6912 * bs), vec_gc0);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM2560_6912 * bs), vec_gc1);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM2560_6912 * bs), vec_gc2);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM2560_6912 * bs), vec_gc3);
+    }
+    }
+#endif
+    return 0;
+}
+
+template<int BATCH_SIZE>
+int32_t three_qgemm_lut_2560_6912(void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM2560_6912];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM2560_6912 * sizeof(int32_t));
+#pragma unroll
+    for (int32_t k_outer = 0; k_outer < 6912 / BBK2560_6912; ++k_outer) {
+        three_tbl_impl_2560_6912<BATCH_SIZE, 6912>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BBK2560_6912 / 3 * 32)])), (&(((uint8_t*)A)[(k_outer * BBK2560_6912 / 3 / 2 * BM2560_6912)])), (&(((uint8_t*)sign)[(k_outer * BBK2560_6912 / 3 / 8 * BM2560_6912)])));
+    }
+#pragma unroll
+    for (int bs = 0; bs < BATCH_SIZE; bs++) {
+#pragma unroll
+        for (int i = 0; i < BM2560_6912; i++) {
+            ((int32_t*)C)[i + bs * BM2560_6912] = (int32_t)(((int32_t*)CBits)[i + bs * BM2560_6912]);
+        }
+  }
+  return 0;
+}
+
+template<int BATCH_SIZE>
+int32_t two_qgemm_lut_2560_6912(void* A, void* LUT, void* Scales, void* LUT_Scales, void* C) {
+    alignas(32) uint32_t CBits[BATCH_SIZE * BM2560_6912];
+    memset(&(CBits[0]), 0, BATCH_SIZE * BM2560_6912 * sizeof(int32_t));
 #pragma unroll
     for (int32_t k_outer = 0; k_outer < 0 / 32; ++k_outer) {
-        two_tbl_impl3200_8640<BATCH_SIZE, 0>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BK2 / 2 * 32)])), (&(((uint8_t*)A)[(k_outer * BK2 / 2 / 2 * BM3200_8640)])));
+        two_tbl_impl2560_6912<BATCH_SIZE, 0>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BK2 / 2 * 32)])), (&(((uint8_t*)A)[(k_outer * BK2 / 2 / 2 * BM2560_6912)])));
     }
 #pragma unroll
     for (int bs = 0; bs < BATCH_SIZE; bs++) {
 #pragma unroll
-        for (int i = 0; i < BM3200_8640; i++) {
-            ((int32_t*)C)[i] += (int32_t)(((int32_t*)CBits)[i + bs * BM3200_8640]);
-            ((float*)C)[i] = (float)(((int32_t*)C)[i]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];
-        }
-    }
-  return 0;
-}
-
-#include <immintrin.h>
-
-#define BM3200_3200 320
-#define BBK3200_3200 96
-template<int batch_size, int K3>
-inline void three_tbl_impl_3200_3200(int32_t* c, int8_t* lut, uint8_t* a, uint8_t* sign) {
-#ifdef __AVX2__
-    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
-    const __m256i vec_sign_mask  = _mm256_set1_epi16(0x8000);
-    const __m256i vec_zero  = _mm256_set1_epi8(0x00);
-    const __m256i vec_one  = _mm256_set1_epi8(0xff);
-    const int KK = BBK3200_3200 / 3;
-#pragma unroll
-        for (int i = 0; i < BM3200_3200; i += 32) {
-        __m256i vec_as[KK / 2];
-        __m256i vec_signs[KK / 8];
-        #pragma unroll
-        for (int ai = 0; ai < KK / 2; ai++) {
-            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
-        }
-        #pragma unroll
-        for (int as = 0; as < KK / 8; as++) {
-            vec_signs[as] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(sign + i * KK / 8 + as * 32));
-        }
-#pragma unroll
-    for (int bs = 0; bs < batch_size; bs++) {
-        __m256i vec_c0 = _mm256_setzero_si256();
-        __m256i vec_c1 = _mm256_setzero_si256();
-#pragma unroll
-        for (int k = 0; k < KK / 8; k++) {
-            __m256i vec_sign = vec_signs[k];
-                __m256i vec_a_0 = vec_as[k * 4 + 0];
-                __m128i vec_k1_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0)), 15);
-                __m256i vec_sign_left_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 1)), 15);
-                __m256i vec_v_top_0 = _mm256_and_si256(_mm256_srli_epi16(vec_a_0, 4), vec_mask);
-                __m256i vec_v_top_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_0, vec_k1_0), vec_v_top_0);
-                __m256i vec_v_top_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_0, vec_k2_0), vec_v_top_0);
-                __m256i vec_sign_right_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 2)), 15);
-                __m256i vec_sign_right_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 3)), 15);
-                __m256i vec_v_bot_0 = _mm256_and_si256(vec_a_0, vec_mask);
-                __m256i vec_v_bot_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_0, vec_k3_0), vec_v_bot_0);
-                __m256i vec_v_bot_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_0, vec_k4_0), vec_v_bot_0);
-                __m256i vec_v_top_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_lo_0), vec_sign_left_lo_0);
-                __m256i vec_v_top_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_hi_0), vec_sign_left_hi_0);
-                __m256i vec_v_bot_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_lo_0), vec_sign_right_lo_0);
-                __m256i vec_v_bot_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_hi_0), vec_sign_right_hi_0);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_0);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_0);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_0);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_0);
-                __m256i vec_a_1 = vec_as[k * 4 + 1];
-                __m128i vec_k1_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1)), 15);
-                __m256i vec_sign_left_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 1)), 15);
-                __m256i vec_v_top_1 = _mm256_and_si256(_mm256_srli_epi16(vec_a_1, 4), vec_mask);
-                __m256i vec_v_top_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_1, vec_k1_1), vec_v_top_1);
-                __m256i vec_v_top_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_1, vec_k2_1), vec_v_top_1);
-                __m256i vec_sign_right_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 2)), 15);
-                __m256i vec_sign_right_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 3)), 15);
-                __m256i vec_v_bot_1 = _mm256_and_si256(vec_a_1, vec_mask);
-                __m256i vec_v_bot_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_1, vec_k3_1), vec_v_bot_1);
-                __m256i vec_v_bot_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_1, vec_k4_1), vec_v_bot_1);
-                __m256i vec_v_top_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_lo_1), vec_sign_left_lo_1);
-                __m256i vec_v_top_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_hi_1), vec_sign_left_hi_1);
-                __m256i vec_v_bot_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_lo_1), vec_sign_right_lo_1);
-                __m256i vec_v_bot_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_hi_1), vec_sign_right_hi_1);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_1);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_1);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_1);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_1);
-                __m256i vec_a_2 = vec_as[k * 4 + 2];
-                __m128i vec_k1_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2)), 15);
-                __m256i vec_sign_left_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 1)), 15);
-                __m256i vec_v_top_2 = _mm256_and_si256(_mm256_srli_epi16(vec_a_2, 4), vec_mask);
-                __m256i vec_v_top_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_2, vec_k1_2), vec_v_top_2);
-                __m256i vec_v_top_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_2, vec_k2_2), vec_v_top_2);
-                __m256i vec_sign_right_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 2)), 15);
-                __m256i vec_sign_right_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 3)), 15);
-                __m256i vec_v_bot_2 = _mm256_and_si256(vec_a_2, vec_mask);
-                __m256i vec_v_bot_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_2, vec_k3_2), vec_v_bot_2);
-                __m256i vec_v_bot_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_2, vec_k4_2), vec_v_bot_2);
-                __m256i vec_v_top_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_lo_2), vec_sign_left_lo_2);
-                __m256i vec_v_top_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_hi_2), vec_sign_left_hi_2);
-                __m256i vec_v_bot_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_lo_2), vec_sign_right_lo_2);
-                __m256i vec_v_bot_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_hi_2), vec_sign_right_hi_2);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_2);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_2);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_2);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_2);
-                __m256i vec_a_3 = vec_as[k * 4 + 3];
-                __m128i vec_k1_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3)), 15);
-                __m256i vec_sign_left_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 1)), 15);
-                __m256i vec_v_top_3 = _mm256_and_si256(_mm256_srli_epi16(vec_a_3, 4), vec_mask);
-                __m256i vec_v_top_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_3, vec_k1_3), vec_v_top_3);
-                __m256i vec_v_top_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_3, vec_k2_3), vec_v_top_3);
-                __m256i vec_sign_right_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 2)), 15);
-                __m256i vec_sign_right_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 3)), 15);
-                __m256i vec_v_bot_3 = _mm256_and_si256(vec_a_3, vec_mask);
-                __m256i vec_v_bot_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_3, vec_k3_3), vec_v_bot_3);
-                __m256i vec_v_bot_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_3, vec_k4_3), vec_v_bot_3);
-                __m256i vec_v_top_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_lo_3), vec_sign_left_lo_3);
-                __m256i vec_v_top_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_hi_3), vec_sign_left_hi_3);
-                __m256i vec_v_bot_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_lo_3), vec_sign_right_lo_3);
-                __m256i vec_v_bot_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_hi_3), vec_sign_right_hi_3);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_3);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_3);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_3);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_3);
-        }
-        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_3200 * bs));
-        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_3200 * bs));
-        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_3200 * bs));
-        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_3200 * bs));
-        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
-        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
-        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
-        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_3200 * bs), vec_gc0);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_3200 * bs), vec_gc1);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_3200 * bs), vec_gc2);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_3200 * bs), vec_gc3);
-    }
-    }
-#endif
-}
-
-template<int batch_size, int K2>
-inline int32_t two_tbl_impl3200_3200(int32_t* c, int8_t* lut, uint8_t* a) {
-#ifdef __AVX2__
-    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
-    const int KK = BK2 / 2;
-#pragma unroll
-    for (int i = 0; i < BM3200_3200; i += 32) {
-        __m256i vec_as[KK / 2];
-        #pragma unroll
-        for (int ai = 0; ai < KK / 2; ai++) {
-            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
-        }
-#pragma unroll
-    for (int bs = 0; bs < batch_size; bs++) {
-        __m256i vec_c0 = _mm256_setzero_si256();
-        __m256i vec_c1 = _mm256_setzero_si256();
-#pragma unroll
-        for (int k = 0; k < KK / 8; k++) {
-            #pragma unroll
-            for (int j = 0; j < 4; j++) {
-                __m256i vec_a = vec_as[k * 4 + j];
-
-                __m128i vec_k1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 0  + K2 / 2 * 32 * bs));
-                __m128i vec_k2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 16 + K2 / 2 * 32 * bs));
-                __m128i vec_k3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 32 + K2 / 2 * 32 * bs));
-                __m128i vec_k4 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 48 + K2 / 2 * 32 * bs));
-
-                __m256i vec_v_top = _mm256_and_si256(_mm256_srli_epi16(vec_a, 4), vec_mask);
-                __m256i vec_v_top_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1, vec_k1), vec_v_top);
-                __m256i vec_v_top_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2, vec_k2), vec_v_top);
-
-                __m256i vec_v_bot = _mm256_and_si256(vec_a, vec_mask);
-                __m256i vec_v_bot_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3, vec_k3), vec_v_bot);
-                __m256i vec_v_bot_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4, vec_k4), vec_v_bot);
-
-                __m256i vec_v_top_lo = _mm256_unpackhi_epi8(vec_v_top_fir, vec_v_top_sec);
-                __m256i vec_v_top_hi = _mm256_unpacklo_epi8(vec_v_top_fir, vec_v_top_sec);
-                __m256i vec_v_bot_lo = _mm256_unpackhi_epi8(vec_v_bot_fir, vec_v_bot_sec);
-                __m256i vec_v_bot_hi = _mm256_unpacklo_epi8(vec_v_bot_fir, vec_v_bot_sec);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo); 
-            }
-        }
-
-        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_3200 * bs));
-        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_3200 * bs));
-        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_3200 * bs));
-        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_3200 * bs));
-
-        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
-        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
-        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
-        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
-
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM3200_3200 * bs), vec_gc0);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM3200_3200 * bs), vec_gc1);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM3200_3200 * bs), vec_gc2);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM3200_3200 * bs), vec_gc3);
-    }
-    }
-#endif
-    return 0;
-}
-
-template<int BATCH_SIZE>
-int32_t three_qgemm_lut_3200_3200(void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
-    alignas(32) uint32_t CBits[BATCH_SIZE * BM3200_3200];
-    memset(&(CBits[0]), 0, BATCH_SIZE * BM3200_3200 * sizeof(int32_t));
-#pragma unroll
-    for (int32_t k_outer = 0; k_outer < 3168 / BBK3200_3200; ++k_outer) {
-        three_tbl_impl_3200_3200<BATCH_SIZE, 3168>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BBK3200_3200 / 3 * 32)])), (&(((uint8_t*)A)[(k_outer * BBK3200_3200 / 3 / 2 * BM3200_3200)])), (&(((uint8_t*)sign)[(k_outer * BBK3200_3200 / 3 / 8 * BM3200_3200)])));
-    }
-#pragma unroll
-    for (int bs = 0; bs < BATCH_SIZE; bs++) {
-#pragma unroll
-        for (int i = 0; i < BM3200_3200; i++) {
-            ((int32_t*)C)[i] = (int32_t)(((int32_t*)CBits)[i + bs * BM3200_3200]);
-        }
-  }
-  return 0;
-}
-
-template<int BATCH_SIZE>
-int32_t two_qgemm_lut_3200_3200(void* A, void* LUT, void* Scales, void* LUT_Scales, void* C) {
-    alignas(32) uint32_t CBits[BATCH_SIZE * BM3200_3200];
-    memset(&(CBits[0]), 0, BATCH_SIZE * BM3200_3200 * sizeof(int32_t));
-#pragma unroll
-    for (int32_t k_outer = 0; k_outer < 32 / 32; ++k_outer) {
-        two_tbl_impl3200_3200<BATCH_SIZE, 32>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BK2 / 2 * 32)])), (&(((uint8_t*)A)[(k_outer * BK2 / 2 / 2 * BM3200_3200)])));
-    }
-#pragma unroll
-    for (int bs = 0; bs < BATCH_SIZE; bs++) {
-#pragma unroll
-        for (int i = 0; i < BM3200_3200; i++) {
-            ((int32_t*)C)[i] += (int32_t)(((int32_t*)CBits)[i + bs * BM3200_3200]);
-            ((float*)C)[i] = (float)(((int32_t*)C)[i]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];
-        }
-    }
-  return 0;
-}
-
-#include <immintrin.h>
-
-#define BM8640_3200 320
-#define BBK8640_3200 96
-template<int batch_size, int K3>
-inline void three_tbl_impl_8640_3200(int32_t* c, int8_t* lut, uint8_t* a, uint8_t* sign) {
-#ifdef __AVX2__
-    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
-    const __m256i vec_sign_mask  = _mm256_set1_epi16(0x8000);
-    const __m256i vec_zero  = _mm256_set1_epi8(0x00);
-    const __m256i vec_one  = _mm256_set1_epi8(0xff);
-    const int KK = BBK8640_3200 / 3;
-#pragma unroll
-        for (int i = 0; i < BM8640_3200; i += 32) {
-        __m256i vec_as[KK / 2];
-        __m256i vec_signs[KK / 8];
-        #pragma unroll
-        for (int ai = 0; ai < KK / 2; ai++) {
-            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
-        }
-        #pragma unroll
-        for (int as = 0; as < KK / 8; as++) {
-            vec_signs[as] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(sign + i * KK / 8 + as * 32));
-        }
-#pragma unroll
-    for (int bs = 0; bs < batch_size; bs++) {
-        __m256i vec_c0 = _mm256_setzero_si256();
-        __m256i vec_c1 = _mm256_setzero_si256();
-#pragma unroll
-        for (int k = 0; k < KK / 8; k++) {
-            __m256i vec_sign = vec_signs[k];
-                __m256i vec_a_0 = vec_as[k * 4 + 0];
-                __m128i vec_k1_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_0 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 0 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0)), 15);
-                __m256i vec_sign_left_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 1)), 15);
-                __m256i vec_v_top_0 = _mm256_and_si256(_mm256_srli_epi16(vec_a_0, 4), vec_mask);
-                __m256i vec_v_top_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_0, vec_k1_0), vec_v_top_0);
-                __m256i vec_v_top_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_0, vec_k2_0), vec_v_top_0);
-                __m256i vec_sign_right_hi_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 2)), 15);
-                __m256i vec_sign_right_lo_0 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 0 + 3)), 15);
-                __m256i vec_v_bot_0 = _mm256_and_si256(vec_a_0, vec_mask);
-                __m256i vec_v_bot_fir_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_0, vec_k3_0), vec_v_bot_0);
-                __m256i vec_v_bot_sec_0 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_0, vec_k4_0), vec_v_bot_0);
-                __m256i vec_v_top_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_lo_0), vec_sign_left_lo_0);
-                __m256i vec_v_top_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_0, vec_v_top_sec_0), vec_sign_left_hi_0), vec_sign_left_hi_0);
-                __m256i vec_v_bot_lo_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_lo_0), vec_sign_right_lo_0);
-                __m256i vec_v_bot_hi_0 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_0, vec_v_bot_sec_0), vec_sign_right_hi_0), vec_sign_right_hi_0);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_0);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_0);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_0);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_0);
-                __m256i vec_a_1 = vec_as[k * 4 + 1];
-                __m128i vec_k1_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 1 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1)), 15);
-                __m256i vec_sign_left_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 1)), 15);
-                __m256i vec_v_top_1 = _mm256_and_si256(_mm256_srli_epi16(vec_a_1, 4), vec_mask);
-                __m256i vec_v_top_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_1, vec_k1_1), vec_v_top_1);
-                __m256i vec_v_top_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_1, vec_k2_1), vec_v_top_1);
-                __m256i vec_sign_right_hi_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 2)), 15);
-                __m256i vec_sign_right_lo_1 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 1 + 3)), 15);
-                __m256i vec_v_bot_1 = _mm256_and_si256(vec_a_1, vec_mask);
-                __m256i vec_v_bot_fir_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_1, vec_k3_1), vec_v_bot_1);
-                __m256i vec_v_bot_sec_1 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_1, vec_k4_1), vec_v_bot_1);
-                __m256i vec_v_top_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_lo_1), vec_sign_left_lo_1);
-                __m256i vec_v_top_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_1, vec_v_top_sec_1), vec_sign_left_hi_1), vec_sign_left_hi_1);
-                __m256i vec_v_bot_lo_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_lo_1), vec_sign_right_lo_1);
-                __m256i vec_v_bot_hi_1 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_1, vec_v_bot_sec_1), vec_sign_right_hi_1), vec_sign_right_hi_1);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_1);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_1);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_1);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_1);
-                __m256i vec_a_2 = vec_as[k * 4 + 2];
-                __m128i vec_k1_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 2 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2)), 15);
-                __m256i vec_sign_left_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 1)), 15);
-                __m256i vec_v_top_2 = _mm256_and_si256(_mm256_srli_epi16(vec_a_2, 4), vec_mask);
-                __m256i vec_v_top_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_2, vec_k1_2), vec_v_top_2);
-                __m256i vec_v_top_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_2, vec_k2_2), vec_v_top_2);
-                __m256i vec_sign_right_hi_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 2)), 15);
-                __m256i vec_sign_right_lo_2 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 2 + 3)), 15);
-                __m256i vec_v_bot_2 = _mm256_and_si256(vec_a_2, vec_mask);
-                __m256i vec_v_bot_fir_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_2, vec_k3_2), vec_v_bot_2);
-                __m256i vec_v_bot_sec_2 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_2, vec_k4_2), vec_v_bot_2);
-                __m256i vec_v_top_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_lo_2), vec_sign_left_lo_2);
-                __m256i vec_v_top_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_2, vec_v_top_sec_2), vec_sign_left_hi_2), vec_sign_left_hi_2);
-                __m256i vec_v_bot_lo_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_lo_2), vec_sign_right_lo_2);
-                __m256i vec_v_bot_hi_2 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_2, vec_v_bot_sec_2), vec_sign_right_hi_2), vec_sign_right_hi_2);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_2);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_2);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_2);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_2);
-                __m256i vec_a_3 = vec_as[k * 4 + 3];
-                __m128i vec_k1_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 0  + K3 / 3 * 32 * bs));
-                __m128i vec_k2_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 16 + K3 / 3 * 32 * bs));
-                __m128i vec_k3_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 32 + K3 / 3 * 32 * bs));
-                __m128i vec_k4_3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + 3 * 64 + 48 + K3 / 3 * 32 * bs));
-                __m256i vec_sign_left_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3)), 15);
-                __m256i vec_sign_left_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 1)), 15);
-                __m256i vec_v_top_3 = _mm256_and_si256(_mm256_srli_epi16(vec_a_3, 4), vec_mask);
-                __m256i vec_v_top_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1_3, vec_k1_3), vec_v_top_3);
-                __m256i vec_v_top_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2_3, vec_k2_3), vec_v_top_3);
-                __m256i vec_sign_right_hi_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 2)), 15);
-                __m256i vec_sign_right_lo_3 = _mm256_srai_epi16(_mm256_slli_epi16(vec_sign, (4 * 3 + 3)), 15);
-                __m256i vec_v_bot_3 = _mm256_and_si256(vec_a_3, vec_mask);
-                __m256i vec_v_bot_fir_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3_3, vec_k3_3), vec_v_bot_3);
-                __m256i vec_v_bot_sec_3 = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4_3, vec_k4_3), vec_v_bot_3);
-                __m256i vec_v_top_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_lo_3), vec_sign_left_lo_3);
-                __m256i vec_v_top_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_top_fir_3, vec_v_top_sec_3), vec_sign_left_hi_3), vec_sign_left_hi_3);
-                __m256i vec_v_bot_lo_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpackhi_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_lo_3), vec_sign_right_lo_3);
-                __m256i vec_v_bot_hi_3 = _mm256_xor_si256(_mm256_add_epi16(_mm256_unpacklo_epi8(vec_v_bot_fir_3, vec_v_bot_sec_3), vec_sign_right_hi_3), vec_sign_right_hi_3);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi_3);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi_3);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo_3);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo_3);
-        }
-        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM8640_3200 * bs));
-        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM8640_3200 * bs));
-        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM8640_3200 * bs));
-        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM8640_3200 * bs));
-        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
-        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
-        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
-        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM8640_3200 * bs), vec_gc0);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM8640_3200 * bs), vec_gc1);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM8640_3200 * bs), vec_gc2);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM8640_3200 * bs), vec_gc3);
-    }
-    }
-#endif
-}
-
-template<int batch_size, int K2>
-inline int32_t two_tbl_impl8640_3200(int32_t* c, int8_t* lut, uint8_t* a) {
-#ifdef __AVX2__
-    const __m256i vec_mask = _mm256_set1_epi8(0x0f);
-    const int KK = BK2 / 2;
-#pragma unroll
-    for (int i = 0; i < BM8640_3200; i += 32) {
-        __m256i vec_as[KK / 2];
-        #pragma unroll
-        for (int ai = 0; ai < KK / 2; ai++) {
-            vec_as[ai] = _mm256_loadu_si256(reinterpret_cast<__m256i*>(a + i * KK / 2 + ai * 32));
-        }
-#pragma unroll
-    for (int bs = 0; bs < batch_size; bs++) {
-        __m256i vec_c0 = _mm256_setzero_si256();
-        __m256i vec_c1 = _mm256_setzero_si256();
-#pragma unroll
-        for (int k = 0; k < KK / 8; k++) {
-            #pragma unroll
-            for (int j = 0; j < 4; j++) {
-                __m256i vec_a = vec_as[k * 4 + j];
-
-                __m128i vec_k1 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 0  + K2 / 2 * 32 * bs));
-                __m128i vec_k2 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 16 + K2 / 2 * 32 * bs));
-                __m128i vec_k3 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 32 + K2 / 2 * 32 * bs));
-                __m128i vec_k4 = _mm_loadu_si128(reinterpret_cast<__m128i*>(lut + k * 32 * 8 + j * 64 + 48 + K2 / 2 * 32 * bs));
-
-                __m256i vec_v_top = _mm256_and_si256(_mm256_srli_epi16(vec_a, 4), vec_mask);
-                __m256i vec_v_top_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k1, vec_k1), vec_v_top);
-                __m256i vec_v_top_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k2, vec_k2), vec_v_top);
-
-                __m256i vec_v_bot = _mm256_and_si256(vec_a, vec_mask);
-                __m256i vec_v_bot_fir = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k3, vec_k3), vec_v_bot);
-                __m256i vec_v_bot_sec = _mm256_shuffle_epi8(_mm256_set_m128i(vec_k4, vec_k4), vec_v_bot);
-
-                __m256i vec_v_top_lo = _mm256_unpackhi_epi8(vec_v_top_fir, vec_v_top_sec);
-                __m256i vec_v_top_hi = _mm256_unpacklo_epi8(vec_v_top_fir, vec_v_top_sec);
-                __m256i vec_v_bot_lo = _mm256_unpackhi_epi8(vec_v_bot_fir, vec_v_bot_sec);
-                __m256i vec_v_bot_hi = _mm256_unpacklo_epi8(vec_v_bot_fir, vec_v_bot_sec);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_top_hi);
-                vec_c0 = _mm256_add_epi16(vec_c0, vec_v_bot_hi);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_top_lo);
-                vec_c1 = _mm256_add_epi16(vec_c1, vec_v_bot_lo); 
-            }
-        }
-
-        __m256i vec_gc0 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i      + BM8640_3200 * bs));
-        __m256i vec_gc1 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM8640_3200 * bs));
-        __m256i vec_gc2 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM8640_3200 * bs));
-        __m256i vec_gc3 = _mm256_loadu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM8640_3200 * bs));
-
-        vec_gc0 = _mm256_add_epi32(vec_gc0, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c0)));
-        vec_gc1 = _mm256_add_epi32(vec_gc1, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c0, 1)));
-        vec_gc2 = _mm256_add_epi32(vec_gc2, _mm256_cvtepi16_epi32(_mm256_castsi256_si128(vec_c1)));
-        vec_gc3 = _mm256_add_epi32(vec_gc3, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(vec_c1, 1)));
-
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i      + BM8640_3200 * bs), vec_gc0);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 8  + BM8640_3200 * bs), vec_gc1);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 16 + BM8640_3200 * bs), vec_gc2);
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(c + i + 24 + BM8640_3200 * bs), vec_gc3);
-    }
-    }
-#endif
-    return 0;
-}
-
-template<int BATCH_SIZE>
-int32_t three_qgemm_lut_8640_3200(void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
-    alignas(32) uint32_t CBits[BATCH_SIZE * BM8640_3200];
-    memset(&(CBits[0]), 0, BATCH_SIZE * BM8640_3200 * sizeof(int32_t));
-#pragma unroll
-    for (int32_t k_outer = 0; k_outer < 3168 / BBK8640_3200; ++k_outer) {
-        three_tbl_impl_8640_3200<BATCH_SIZE, 3168>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BBK8640_3200 / 3 * 32)])), (&(((uint8_t*)A)[(k_outer * BBK8640_3200 / 3 / 2 * BM8640_3200)])), (&(((uint8_t*)sign)[(k_outer * BBK8640_3200 / 3 / 8 * BM8640_3200)])));
-    }
-#pragma unroll
-    for (int bs = 0; bs < BATCH_SIZE; bs++) {
-#pragma unroll
-        for (int i = 0; i < BM8640_3200; i++) {
-            ((int32_t*)C)[i] = (int32_t)(((int32_t*)CBits)[i + bs * BM8640_3200]);
-        }
-  }
-  return 0;
-}
-
-template<int BATCH_SIZE>
-int32_t two_qgemm_lut_8640_3200(void* A, void* LUT, void* Scales, void* LUT_Scales, void* C) {
-    alignas(32) uint32_t CBits[BATCH_SIZE * BM8640_3200];
-    memset(&(CBits[0]), 0, BATCH_SIZE * BM8640_3200 * sizeof(int32_t));
-#pragma unroll
-    for (int32_t k_outer = 0; k_outer < 32 / 32; ++k_outer) {
-        two_tbl_impl8640_3200<BATCH_SIZE, 32>((&(((int32_t*)CBits)[0])), (&(((int8_t*)LUT)[(k_outer * BK2 / 2 * 32)])), (&(((uint8_t*)A)[(k_outer * BK2 / 2 / 2 * BM8640_3200)])));
-    }
-#pragma unroll
-    for (int bs = 0; bs < BATCH_SIZE; bs++) {
-#pragma unroll
-        for (int i = 0; i < BM8640_3200; i++) {
-            ((int32_t*)C)[i] += (int32_t)(((int32_t*)CBits)[i + bs * BM8640_3200]);
-            ((float*)C)[i] = (float)(((int32_t*)C)[i]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];
+        for (int i = 0; i < BM2560_6912; i++) {
+            ((int32_t*)C)[i + bs * BM2560_6912] += (int32_t)(((int32_t*)CBits)[i + bs * BM2560_6912]);
+            ((float*)C)[i + bs * BM2560_6912] = (float)(((int32_t*)C)[i + bs * BM2560_6912]) / ((float*)LUT_Scales)[bs] * ((float*)Scales)[0];
         }
     }
   return 0;
@@ -1002,122 +1246,161 @@ int32_t two_qgemm_lut_8640_3200(void* A, void* LUT, void* Scales, void* LUT_Scal
 
 void ggml_preprocessor(int bs, int m, int three_k, int two_k, void* B, void* LUT_Scales, void* Three_QLUT, void* Two_QLUT) {
     partial_max_reset(bs, (&(((float*)LUT_Scales)[0])));
-    if (m == 3200 && two_k == 0 && three_k == 8640) {
+    if (m == 2560 && two_k == 64 && three_k == 2496) {
         for (int32_t b = 0; b < bs; b++) {
             per_tensor_quant(two_k + three_k, (&(((float*)LUT_Scales)[b])), (&(((float*)B)[b * (two_k + three_k)])));
-            three_lut_ctor<8640>((&(((int8_t*)Three_QLUT)[b * three_k / 3 * 32])), (&(((float*)B)[b * (three_k + two_k)])), (&(((float*)LUT_Scales)[b])));
-            two_lut_ctor<0>((&(((int8_t*)Two_QLUT)[b * two_k / 2 * 32])), (&(((float*)B)[b * (three_k + two_k) + 8640])), (&(((float*)LUT_Scales)[b])));
+            three_lut_ctor<2496>((&(((int8_t*)Three_QLUT)[b * three_k / 3 * 32])), (&(((float*)B)[b * (three_k + two_k)])), (&(((float*)LUT_Scales)[b])));
+            two_lut_ctor<64>((&(((int8_t*)Two_QLUT)[b * two_k / 2 * 32])), (&(((float*)B)[b * (three_k + two_k) + 2496])), (&(((float*)LUT_Scales)[b])));
         }
     }
-    else if (m == 3200 && two_k == 32 && three_k == 3168) {
+    else if (m == 640 && two_k == 64 && three_k == 2496) {
         for (int32_t b = 0; b < bs; b++) {
             per_tensor_quant(two_k + three_k, (&(((float*)LUT_Scales)[b])), (&(((float*)B)[b * (two_k + three_k)])));
-            three_lut_ctor<3168>((&(((int8_t*)Three_QLUT)[b * three_k / 3 * 32])), (&(((float*)B)[b * (three_k + two_k)])), (&(((float*)LUT_Scales)[b])));
-            two_lut_ctor<32>((&(((int8_t*)Two_QLUT)[b * two_k / 2 * 32])), (&(((float*)B)[b * (three_k + two_k) + 3168])), (&(((float*)LUT_Scales)[b])));
+            three_lut_ctor<2496>((&(((int8_t*)Three_QLUT)[b * three_k / 3 * 32])), (&(((float*)B)[b * (three_k + two_k)])), (&(((float*)LUT_Scales)[b])));
+            two_lut_ctor<64>((&(((int8_t*)Two_QLUT)[b * two_k / 2 * 32])), (&(((float*)B)[b * (three_k + two_k) + 2496])), (&(((float*)LUT_Scales)[b])));
         }
     }
-    else if (m == 8640 && two_k == 32 && three_k == 3168) {
+    else if (m == 6912 && two_k == 64 && three_k == 2496) {
         for (int32_t b = 0; b < bs; b++) {
             per_tensor_quant(two_k + three_k, (&(((float*)LUT_Scales)[b])), (&(((float*)B)[b * (two_k + three_k)])));
-            three_lut_ctor<3168>((&(((int8_t*)Three_QLUT)[b * three_k / 3 * 32])), (&(((float*)B)[b * (three_k + two_k)])), (&(((float*)LUT_Scales)[b])));
-            two_lut_ctor<32>((&(((int8_t*)Two_QLUT)[b * two_k / 2 * 32])), (&(((float*)B)[b * (three_k + two_k) + 3168])), (&(((float*)LUT_Scales)[b])));
+            three_lut_ctor<2496>((&(((int8_t*)Three_QLUT)[b * three_k / 3 * 32])), (&(((float*)B)[b * (three_k + two_k)])), (&(((float*)LUT_Scales)[b])));
+            two_lut_ctor<64>((&(((int8_t*)Two_QLUT)[b * two_k / 2 * 32])), (&(((float*)B)[b * (three_k + two_k) + 2496])), (&(((float*)LUT_Scales)[b])));
+        }
+    }
+    else if (m == 2560 && two_k == 0 && three_k == 6912) {
+        for (int32_t b = 0; b < bs; b++) {
+            per_tensor_quant(two_k + three_k, (&(((float*)LUT_Scales)[b])), (&(((float*)B)[b * (two_k + three_k)])));
+            three_lut_ctor<6912>((&(((int8_t*)Three_QLUT)[b * three_k / 3 * 32])), (&(((float*)B)[b * (three_k + two_k)])), (&(((float*)LUT_Scales)[b])));
+            two_lut_ctor<0>((&(((int8_t*)Two_QLUT)[b * two_k / 2 * 32])), (&(((float*)B)[b * (three_k + two_k) + 6912])), (&(((float*)LUT_Scales)[b])));
         }
     }
 }
 void ggml_qgemm_lut(int bs, int m, int k, int BK, void* A, void* sign, void* LUT, void* Scales, void* LUT_Scales, void* C) {
-    if (m == 3200 && k == 8640) {
+    if (m == 2560 && k == 2560) {
+        if (BK == 64) {
+            if (bs == 1) {
+                two_qgemm_lut_2560_2560<1>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 8) {
+                two_qgemm_lut_2560_2560<8>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 32) {
+                two_qgemm_lut_2560_2560<32>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 128) {
+                two_qgemm_lut_2560_2560<128>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 256) {
+                two_qgemm_lut_2560_2560<256>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 512) {
+                two_qgemm_lut_2560_2560<512>(A, LUT, Scales, LUT_Scales, C);
+            }
+        }
+        else if (BK == 2496) {
+            if (bs == 1) {
+                three_qgemm_lut_2560_2560<1>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 8) {
+                three_qgemm_lut_2560_2560<8>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 32) {
+                three_qgemm_lut_2560_2560<32>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 128) {
+                three_qgemm_lut_2560_2560<128>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 256) {
+                three_qgemm_lut_2560_2560<256>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 512) {
+                three_qgemm_lut_2560_2560<512>(A, sign, LUT, Scales, LUT_Scales, C);
+            }
+        }
+    }
+    else if (m == 640 && k == 2560) {
+        if (BK == 64) {
+            if (bs == 1) {
+                two_qgemm_lut_640_2560<1>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 8) {
+                two_qgemm_lut_640_2560<8>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 32) {
+                two_qgemm_lut_640_2560<32>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 128) {
+                two_qgemm_lut_640_2560<128>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 256) {
+                two_qgemm_lut_640_2560<256>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 512) {
+                two_qgemm_lut_640_2560<512>(A, LUT, Scales, LUT_Scales, C);
+            }
+        }
+        else if (BK == 2496) {
+            if (bs == 1) {
+                three_qgemm_lut_640_2560<1>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 8) {
+                three_qgemm_lut_640_2560<8>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 32) {
+                three_qgemm_lut_640_2560<32>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 128) {
+                three_qgemm_lut_640_2560<128>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 256) {
+                three_qgemm_lut_640_2560<256>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 512) {
+                three_qgemm_lut_640_2560<512>(A, sign, LUT, Scales, LUT_Scales, C);
+            }
+        }
+    }
+    else if (m == 6912 && k == 2560) {
+        if (BK == 64) {
+            if (bs == 1) {
+                two_qgemm_lut_6912_2560<1>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 8) {
+                two_qgemm_lut_6912_2560<8>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 32) {
+                two_qgemm_lut_6912_2560<32>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 128) {
+                two_qgemm_lut_6912_2560<128>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 256) {
+                two_qgemm_lut_6912_2560<256>(A, LUT, Scales, LUT_Scales, C);
+            } else if (bs == 512) {
+                two_qgemm_lut_6912_2560<512>(A, LUT, Scales, LUT_Scales, C);
+            }
+        }
+        else if (BK == 2496) {
+            if (bs == 1) {
+                three_qgemm_lut_6912_2560<1>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 8) {
+                three_qgemm_lut_6912_2560<8>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 32) {
+                three_qgemm_lut_6912_2560<32>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 128) {
+                three_qgemm_lut_6912_2560<128>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 256) {
+                three_qgemm_lut_6912_2560<256>(A, sign, LUT, Scales, LUT_Scales, C);
+            }else if (bs == 512) {
+                three_qgemm_lut_6912_2560<512>(A, sign, LUT, Scales, LUT_Scales, C);
+            }
+        }
+    }
+    else if (m == 2560 && k == 6912) {
         if (BK == 0) {
             if (bs == 1) {
-                two_qgemm_lut_3200_8640<1>(A, LUT, Scales, LUT_Scales, C);
+                two_qgemm_lut_2560_6912<1>(A, LUT, Scales, LUT_Scales, C);
             } else if (bs == 8) {
-                two_qgemm_lut_3200_8640<8>(A, LUT, Scales, LUT_Scales, C);
+                two_qgemm_lut_2560_6912<8>(A, LUT, Scales, LUT_Scales, C);
             } else if (bs == 32) {
-                two_qgemm_lut_3200_8640<32>(A, LUT, Scales, LUT_Scales, C);
+                two_qgemm_lut_2560_6912<32>(A, LUT, Scales, LUT_Scales, C);
             } else if (bs == 128) {
-                two_qgemm_lut_3200_8640<128>(A, LUT, Scales, LUT_Scales, C);
+                two_qgemm_lut_2560_6912<128>(A, LUT, Scales, LUT_Scales, C);
             } else if (bs == 256) {
-                two_qgemm_lut_3200_8640<256>(A, LUT, Scales, LUT_Scales, C);
+                two_qgemm_lut_2560_6912<256>(A, LUT, Scales, LUT_Scales, C);
             } else if (bs == 512) {
-                two_qgemm_lut_3200_8640<512>(A, LUT, Scales, LUT_Scales, C);
+                two_qgemm_lut_2560_6912<512>(A, LUT, Scales, LUT_Scales, C);
             }
         }
-        else if (BK == 8640) {
+        else if (BK == 6912) {
             if (bs == 1) {
-                three_qgemm_lut_3200_8640<1>(A, sign, LUT, Scales, LUT_Scales, C);
+                three_qgemm_lut_2560_6912<1>(A, sign, LUT, Scales, LUT_Scales, C);
             }else if (bs == 8) {
-                three_qgemm_lut_3200_8640<8>(A, sign, LUT, Scales, LUT_Scales, C);
+                three_qgemm_lut_2560_6912<8>(A, sign, LUT, Scales, LUT_Scales, C);
             }else if (bs == 32) {
-                three_qgemm_lut_3200_8640<32>(A, sign, LUT, Scales, LUT_Scales, C);
+                three_qgemm_lut_2560_6912<32>(A, sign, LUT, Scales, LUT_Scales, C);
             }else if (bs == 128) {
-                three_qgemm_lut_3200_8640<128>(A, sign, LUT, Scales, LUT_Scales, C);
+                three_qgemm_lut_2560_6912<128>(A, sign, LUT, Scales, LUT_Scales, C);
             }else if (bs == 256) {
-                three_qgemm_lut_3200_8640<256>(A, sign, LUT, Scales, LUT_Scales, C);
+                three_qgemm_lut_2560_6912<256>(A, sign, LUT, Scales, LUT_Scales, C);
             }else if (bs == 512) {
-                three_qgemm_lut_3200_8640<512>(A, sign, LUT, Scales, LUT_Scales, C);
-            }
-        }
-    }
-    else if (m == 3200 && k == 3200) {
-        if (BK == 32) {
-            if (bs == 1) {
-                two_qgemm_lut_3200_3200<1>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 8) {
-                two_qgemm_lut_3200_3200<8>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 32) {
-                two_qgemm_lut_3200_3200<32>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 128) {
-                two_qgemm_lut_3200_3200<128>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 256) {
-                two_qgemm_lut_3200_3200<256>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 512) {
-                two_qgemm_lut_3200_3200<512>(A, LUT, Scales, LUT_Scales, C);
-            }
-        }
-        else if (BK == 3168) {
-            if (bs == 1) {
-                three_qgemm_lut_3200_3200<1>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 8) {
-                three_qgemm_lut_3200_3200<8>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 32) {
-                three_qgemm_lut_3200_3200<32>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 128) {
-                three_qgemm_lut_3200_3200<128>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 256) {
-                three_qgemm_lut_3200_3200<256>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 512) {
-                three_qgemm_lut_3200_3200<512>(A, sign, LUT, Scales, LUT_Scales, C);
-            }
-        }
-    }
-    else if (m == 8640 && k == 3200) {
-        if (BK == 32) {
-            if (bs == 1) {
-                two_qgemm_lut_8640_3200<1>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 8) {
-                two_qgemm_lut_8640_3200<8>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 32) {
-                two_qgemm_lut_8640_3200<32>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 128) {
-                two_qgemm_lut_8640_3200<128>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 256) {
-                two_qgemm_lut_8640_3200<256>(A, LUT, Scales, LUT_Scales, C);
-            } else if (bs == 512) {
-                two_qgemm_lut_8640_3200<512>(A, LUT, Scales, LUT_Scales, C);
-            }
-        }
-        else if (BK == 3168) {
-            if (bs == 1) {
-                three_qgemm_lut_8640_3200<1>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 8) {
-                three_qgemm_lut_8640_3200<8>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 32) {
-                three_qgemm_lut_8640_3200<32>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 128) {
-                three_qgemm_lut_8640_3200<128>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 256) {
-                three_qgemm_lut_8640_3200<256>(A, sign, LUT, Scales, LUT_Scales, C);
-            }else if (bs == 512) {
-                three_qgemm_lut_8640_3200<512>(A, sign, LUT, Scales, LUT_Scales, C);
+                three_qgemm_lut_2560_6912<512>(A, sign, LUT, Scales, LUT_Scales, C);
             }
         }
     }
@@ -1134,17 +1417,21 @@ void ggml_bitnet_transform_tensor(struct ggml_tensor * tensor) {
     int bk = 0;
     int bm = 0;
 
-    if (m == 3200 && k == 8640) {
-        bm = BM3200_8640;
-        bk = BBK3200_8640;
+    if (m == 2560 && k == 2560) {
+        bm = BM2560_2560;
+        bk = BBK2560_2560;
     }
-else if (m == 3200 && k == 3200) {
-        bm = BM3200_3200;
-        bk = BBK3200_3200;
+else if (m == 640 && k == 2560) {
+        bm = BM640_2560;
+        bk = BBK640_2560;
     }
-else if (m == 8640 && k == 3200) {
-        bm = BM8640_3200;
-        bk = BBK8640_3200;
+else if (m == 6912 && k == 2560) {
+        bm = BM6912_2560;
+        bk = BBK6912_2560;
+    }
+else if (m == 2560 && k == 6912) {
+        bm = BM2560_6912;
+        bk = BBK2560_6912;
     }
 
     const int n_tile_num = m / bm;
@@ -1154,10 +1441,10 @@ else if (m == 8640 && k == 3200) {
 
     scales = (bitnet_float_type *) aligned_malloc(sizeof(bitnet_float_type));
     qweights = (uint8_t *) tensor->data;
-    int nbytes = (k - 256) * m / 3 * 5 / 8 + 256 * m / 2 * 4 / 8;
-    if (nbytes % 32 != 0) nbytes = 32 - nbytes % 32 + nbytes;
-    float * i2_scales = (float * )(qweights + nbytes);
-    scales[0] = (bitnet_float_type) i2_scales[0];
+    // The real per-tensor scale is loaded separately as the "<layer>.scale" GGUF
+    // tensor and applied by build_lora_mm() in the graph; qweights holds only the
+    // packed ternary/sign data here, so this stays the identity.
+    scales[0] = (bitnet_float_type) 1.0f;
 
     tensor->extra = bitnet_tensor_extras + bitnet_tensor_extras_index;
     bitnet_tensor_extras[bitnet_tensor_extras_index++] = {
