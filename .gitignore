@@ -44,4 +44,5 @@ __pycache__/
 poetry.toml
 
 build/
+build-rpi-cm4/
 logs/
