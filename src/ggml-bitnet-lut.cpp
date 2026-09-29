@@ -62,15 +62,11 @@ bool ggml_bitnet_can_mul_mat(const struct ggml_tensor * src0, const struct ggml_
 }
 
 size_t ggml_bitnet_mul_mat_get_wsize(const struct ggml_tensor * src0, const struct ggml_tensor * src1, const struct ggml_tensor * dst) {
-    const size_t ne01 = src0->ne[1];
-    const size_t ne10 = src1->ne[0];
-    const size_t ne11 = src1->ne[1];
-    const int bits = ggml_bitnet_get_type_bits(src0->type);
+    const size_t ne00 = src0->ne[0];
 
-    size_t wsize = ne10 * ne11 * 15 * sizeof(int8_t) + 1 * ne11 * 2 * sizeof(bitnet_float_type);
-    if (sizeof(bitnet_float_type) == 2) {
-        wsize += std::max(ne10, ne01) * ne11 * sizeof(bitnet_float_type);
-    }
+    // QLUT needs 16 bytes per K element (see lut_ctor<K> in bitnet-lut-kernels.h),
+    // plus one bitnet_float_type for the per-activation LUT scale.
+    size_t wsize = ne00 * 16 * sizeof(int8_t) + sizeof(bitnet_float_type);
     wsize = ((wsize - 1) / 64 + 1) * 64;
     return wsize;
 }
@@ -90,32 +86,31 @@ void ggml_bitnet_mul_mat(const struct ggml_compute_params * params, struct ggml_
     const struct ggml_tensor * src0 = dst->src[0];
     const struct ggml_tensor * src1 = dst->src[1];
 
-    const size_t ne00 = src0->ne[0];
-    const size_t ne01 = src0->ne[1];
-    const size_t ne10 = src1->ne[0];
-    const size_t ne11 = src1->ne[1];
+    const int m = (int)src0->ne[1];
+    const int k = (int)src0->ne[0];
+
+    GGML_ASSERT(src1->ne[1] <= 1);
+    GGML_ASSERT(src1->type == GGML_TYPE_F32);
 
     const int ith = params->ith;
     const int nth = params->nth;
-    const int bits = ggml_bitnet_get_type_bits(src0->type);
+
+    if (ith == 0) {
+        ggml_bitnet_transform_tensor(const_cast<struct ggml_tensor *>(src0));
+    }
+    if (nth > 1) {
+        ggml_barrier(params->threadpool);
+    }
 
     struct bitnet_tensor_extra * extra = (struct bitnet_tensor_extra *)src0->extra;
     GGML_ASSERT(extra != nullptr);
 
     char * wdata = (char *)params->wdata;
-    const size_t wsize_per_thread = ggml_bitnet_mul_mat_get_wsize(src0, src1, dst);
-
-    int8_t  * qlut  = (int8_t  *)(wdata);
-    bitnet_float_type * lut_scales = (bitnet_float_type *)(qlut + ne10 * ne11 * 15);
-    bitnet_float_type * lut_biases = (bitnet_float_type *)(lut_scales + ne11);
+    int8_t * qlut = (int8_t *)wdata;
+    bitnet_float_type * lut_scales = (bitnet_float_type *)(qlut + (size_t)k * 16);
 
     if (ith == 0) {
-        ggml_bitnet_mul_mat_task_init(
-            (void *)((char *)src1->data),
-            (void *)qlut,
-            (void *)lut_scales,
-            (void *)lut_biases,
-            ne10, ne00, ne11, bits);
+        ggml_preprocessor(m, k, src1->data, lut_scales, qlut);
     }
 
     // barrier
@@ -123,14 +118,26 @@ void ggml_bitnet_mul_mat(const struct ggml_compute_params * params, struct ggml_
         ggml_barrier(params->threadpool);
     }
 
-    ggml_bitnet_mul_mat_task_compute(
-        (void *)extra->qweights,
-        (void *)extra->scales,
-        (void *)qlut,
-        (void *)lut_scales,
-        (void *)lut_biases,
-        (void *)((char *)dst->data),
-        ne10, ne00, ne11, bits);
+    // qgemm_lut_{M}_{K} only computes one BM-sized tile of the M output rows per
+    // call (BM is baked into the generated kernel, e.g. 256 for M=2560) - loop
+    // over all n_tile_num = M/BM tiles, offsetting the weight/output pointers,
+    // and split the tiles across threads.
+    const int n_tile_num = extra->n_tile_num;
+    GGML_ASSERT(m % n_tile_num == 0);
+    const int w_size = k * m / 4;
+    const int w_tile_size = w_size / n_tile_num;
+    const int c_tile_size = m / n_tile_num;
+
+    const int th_tile_num = (n_tile_num + nth - 1) / nth;
+    const int th_tile_beg = ith * th_tile_num;
+    const int th_tile_end = std::min((ith + 1) * th_tile_num, n_tile_num);
+
+    for (int i_tile = th_tile_beg; i_tile < th_tile_end; i_tile++) {
+        const int w_offset = i_tile * w_tile_size;
+        const int dst_offset = i_tile * c_tile_size;
+        ggml_qgemm_lut(m, k, extra->qweights + w_offset, qlut, extra->scales, lut_scales,
+                        (bitnet_float_type *)dst->data + dst_offset);
+    }
 }
 
 #endif

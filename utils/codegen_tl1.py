@@ -36,7 +36,14 @@ void per_tensor_quant(int k, void* lut_scales_, void* b_) {{\n\
       float32x4_t abssum = vabsq_f32(vec_bs);\n\
       temp_max = vmaxq_f32(abssum, temp_max);\n\
     }}\n\
-    float32_t scales = 127 / vmaxvq_f32(temp_max);\n\
+    // tbl_impl's table lookup packs a LUT entry (a linear combination of up to\n\
+    // two quantized activation codes, i.e. up to +-2*Qp) into signed low/high\n\
+    // int8 halves that get reconstructed via a plain pairwise ADD (vpadalq_s8),\n\
+    // not a bit-shifted recombination -- so the true 16-bit sum must itself fit\n\
+    // in an int8 for that add to reproduce it. Qp=127 lets paired codes reach\n\
+    // +-254, overflowing int8 and corrupting the reconstructed value; Qp=63\n\
+    // keeps every paired combination within +-126.\n\
+    float32_t scales = 63 / vmaxvq_f32(temp_max);\n\
     *lut_scales = scales;\n\
 #elif defined __AVX2__\n\
     __m256 max_vec = _mm256_set1_ps(0.f);\n\
@@ -157,8 +164,30 @@ inline void lut_ctor(int8_t* qlut, bitnet_float_type* b, bitnet_float_type* lut_
         vec_lut[8] = vec_lut[8] + vec_bs_1;\n\
         Transpose_8_8(&(vec_lut[0]), &(vec_lut[1]), &(vec_lut[2]), &(vec_lut[3]),\n\
                       &(vec_lut[4]), &(vec_lut[5]), &(vec_lut[6]), &(vec_lut[7]));\n\
-        Transpose_8_8(&(vec_lut[8]), &(vec_lut[9]), &(vec_lut[10]), &(vec_lut[11]),\n\
-                      &(vec_lut[12]), &(vec_lut[13]), &(vec_lut[14]), &(vec_lut[15]));\n\
+        // Nibble 8 (hi=+1, lo=+1) equals -(nibble 0) (hi=-1, lo=-1) by construction,\n\
+        // since both are +-(bs0+bs1); derive it from the already-transposed vec_lut[0]\n\
+        // instead of a second Transpose_8_8 over vec_lut[9..15], which were never\n\
+        // initialized (that second transpose corrupted vec_lut[8] whenever both the\n\
+        // paired activations were simultaneously nonzero).\n\
+        vec_lut[8]  = vnegq_s16(vec_lut[0]);\n\
+        vec_lut[9]  = vnegq_s16(vec_lut[1]);\n\
+        vec_lut[10] = vnegq_s16(vec_lut[2]);\n\
+        vec_lut[11] = vnegq_s16(vec_lut[3]);\n\
+        vec_lut[12] = vnegq_s16(vec_lut[4]);\n\
+        vec_lut[13] = vnegq_s16(vec_lut[5]);\n\
+        vec_lut[14] = vnegq_s16(vec_lut[6]);\n\
+        vec_lut[15] = vnegq_s16(vec_lut[7]);\n\
+        // The low/high byte split below reconstructs each 16-bit LUT value via a\n\
+        // plain pairwise ADD (vpadalq_s8) in tbl_impl, not a bit-shifted recombine.\n\
+        // A naturally sign-extended int16 value V<0 has its high byte equal -1,\n\
+        // making low+high = V-1 instead of V. Mask each value to its low byte\n\
+        // (still correctly sign-interpreted as int8, since Qp=63 keeps every\n\
+        // paired value within [-126,126]) so low+high=V holds for negatives too.\n\
+        int16x8_t vec_lut_lowmask = vdupq_n_s16(0x00FF);\n\
+#pragma unroll\n\
+        for (int idx = 0; idx < 16; idx++) {{\n\
+            vec_lut[idx] = vandq_s16(vec_lut[idx], vec_lut_lowmask);\n\
+        }}\n\
 #pragma unroll\n\
         for (int idx = 0; idx < 8; idx++) {{\n\
             int8x16_t q0_s = vqtbl1q_s8(vreinterpretq_s8_s16(vec_lut[idx]), tbl_mask_q);\n\
@@ -201,10 +230,10 @@ def gen_body_core_code(bm, by):
             int8x16_t  vec_v_{0}_right_tmp1 = vqtbl1q_s8(vec_lut[{1} * k + {5}], vec_a{0}_bot);\n\
             int8x16x2_t  vec_v_left_{0} = vzipq_s8(vec_v_{0}_left_tmp1, vec_v_{0}_left_tmp0);\n\
             int8x16x2_t  vec_v_right_{0} = vzipq_s8(vec_v_{0}_right_tmp1, vec_v_{0}_right_tmp0);\n\
-            vec_c[{6}] += vec_v_left_{0}.val[0];\n\
-            vec_c[{6}] += vec_v_right_{0}.val[0];\n\
-            vec_c[{7}] += vec_v_left_{0}.val[1];\n\
-            vec_c[{7}] += vec_v_right_{0}.val[1];\n\
+            vec_c[{6}] = vpadalq_s8(vec_c[{6}], vec_v_left_{0}.val[0]);\n\
+            vec_c[{6}] = vpadalq_s8(vec_c[{6}], vec_v_right_{0}.val[0]);\n\
+            vec_c[{7}] = vpadalq_s8(vec_c[{7}], vec_v_left_{0}.val[1]);\n\
+            vec_c[{7}] = vpadalq_s8(vec_c[{7}], vec_v_right_{0}.val[1]);\n\
         ".format(i, 2 * by // 2, (4 * i) % (2 * by // 2), (4 * i + 1) % (2 * by // 2), (4 * i + 2) % (2 * by // 2), (4 * i + 3) % (2 * by // 2), (i * 2) // (by // 2) * 2 + 0, (i * 2) // (by // 2) * 2 + 1)
         
         all_code = "".join([all_code, core_code])
@@ -232,7 +261,7 @@ inline void tbl_impl_{0}(int32_t* c, int8_t* lut, uint8_t* a) {{\n\
 #ifdef __ARM_NEON\n\
     const int KK = BBK{0} / 2;\n\
     const uint8x16_t vec_mask = vdupq_n_u8(0x0f);\n\
-    const int8x16_t vec_zero = vdupq_n_s16(0x0000);\n\
+    const int16x8_t vec_zero = vdupq_n_s16(0x0000);\n\
     int8x16_t vec_lut[2 * KK];\n\
 ".format(pre, BM, BK)
     
@@ -321,7 +350,7 @@ void preprocessor_k(void* B, void* LUT_Scales, void* QLUT) {{\n\
 def gen_transform_code(kernel_shape):
     kernel_code = "\n\
 void ggml_bitnet_transform_tensor(struct ggml_tensor * tensor) {\n\
-    if (!(is_type_supported(tensor->type) && tensor->backend == GGML_BACKEND_TYPE_CPU && tensor->extra == nullptr)) {\n\
+    if (!(is_type_supported(tensor->type) && tensor->extra == nullptr)) {\n\
         return;\n\
     }\n\
 \n\
@@ -352,8 +381,10 @@ void ggml_bitnet_transform_tensor(struct ggml_tensor * tensor) {\n\
 \n\
     scales = (bitnet_float_type *) aligned_malloc(sizeof(bitnet_float_type));\n\
     qweights = (uint8_t *) tensor->data;\n\
-    float * i2_scales = (float * )(qweights + k * m / 4);\n\
-    scales[0] = (bitnet_float_type) i2_scales[0];\n\
+    // The real per-tensor scale is loaded separately as the \"<layer>.scale\" GGUF\n\
+    // tensor and applied by build_lora_mm() in the graph; qweights holds only the\n\
+    // packed ternary data here, so this stays the identity.\n\
+    scales[0] = (bitnet_float_type) 1.0f;\n\
 \n\
     tensor->extra = bitnet_tensor_extras + bitnet_tensor_extras_index;\n\
     bitnet_tensor_extras[bitnet_tensor_extras_index++] = {\n\
@@ -378,7 +409,12 @@ if __name__ == "__main__":
         "Llama3-8B-1.58-100B-tokens"        : [[14336, 4096],
                                                [4096, 14336],
                                                [1024, 4096],
-                                               [4096, 4096]] 
+                                               [4096, 4096]],
+        # attn_q/attn_output, attn_k/attn_v, ffn_gate/ffn_up, ffn_down
+        "BitNet-b1.58-2B-4T"                : [[2560, 2560],
+                                               [640, 2560],
+                                               [6912, 2560],
+                                               [2560, 6912]]
     }
     
     parser = argparse.ArgumentParser(description='gen impl')

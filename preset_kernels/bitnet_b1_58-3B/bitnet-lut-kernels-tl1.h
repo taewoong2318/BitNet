@@ -187,7 +187,7 @@ inline void tbl_impl_3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
 #ifdef __ARM_NEON
     const int KK = BBK3200_8640 / 2;
     const uint8x16_t vec_mask = vdupq_n_u8(0x0f);
-    const int8x16_t vec_zero = vdupq_n_s16(0x0000);
+    const int16x8_t vec_zero = vdupq_n_s16(0x0000);
     int8x16_t vec_lut[2 * KK];
     int16x8_t vec_c[4];
 #pragma unroll
@@ -214,10 +214,10 @@ inline void tbl_impl_3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_0_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 3], vec_a0_bot);
             int8x16x2_t  vec_v_left_0 = vzipq_s8(vec_v_0_left_tmp1, vec_v_0_left_tmp0);
             int8x16x2_t  vec_v_right_0 = vzipq_s8(vec_v_0_right_tmp1, vec_v_0_right_tmp0);
-            vec_c[0] += vec_v_left_0.val[0];
-            vec_c[0] += vec_v_right_0.val[0];
-            vec_c[1] += vec_v_left_0.val[1];
-            vec_c[1] += vec_v_right_0.val[1];
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_left_0.val[0]));
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_right_0.val[0]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_left_0.val[1]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_right_0.val[1]));
         
             uint8x16_t vec_a_1 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 1 * 16);
             uint8x16_t vec_a1_top = vshrq_n_u8(vec_a_1, 4);
@@ -228,10 +228,10 @@ inline void tbl_impl_3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_1_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 7], vec_a1_bot);
             int8x16x2_t  vec_v_left_1 = vzipq_s8(vec_v_1_left_tmp1, vec_v_1_left_tmp0);
             int8x16x2_t  vec_v_right_1 = vzipq_s8(vec_v_1_right_tmp1, vec_v_1_right_tmp0);
-            vec_c[0] += vec_v_left_1.val[0];
-            vec_c[0] += vec_v_right_1.val[0];
-            vec_c[1] += vec_v_left_1.val[1];
-            vec_c[1] += vec_v_right_1.val[1];
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_left_1.val[0]));
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_right_1.val[0]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_left_1.val[1]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_right_1.val[1]));
         
             uint8x16_t vec_a_2 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 2 * 16);
             uint8x16_t vec_a2_top = vshrq_n_u8(vec_a_2, 4);
@@ -242,10 +242,10 @@ inline void tbl_impl_3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_2_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 3], vec_a2_bot);
             int8x16x2_t  vec_v_left_2 = vzipq_s8(vec_v_2_left_tmp1, vec_v_2_left_tmp0);
             int8x16x2_t  vec_v_right_2 = vzipq_s8(vec_v_2_right_tmp1, vec_v_2_right_tmp0);
-            vec_c[2] += vec_v_left_2.val[0];
-            vec_c[2] += vec_v_right_2.val[0];
-            vec_c[3] += vec_v_left_2.val[1];
-            vec_c[3] += vec_v_right_2.val[1];
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_left_2.val[0]));
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_right_2.val[0]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_left_2.val[1]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_right_2.val[1]));
         
             uint8x16_t vec_a_3 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 3 * 16);
             uint8x16_t vec_a3_top = vshrq_n_u8(vec_a_3, 4);
@@ -256,10 +256,10 @@ inline void tbl_impl_3200_8640(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_3_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 7], vec_a3_bot);
             int8x16x2_t  vec_v_left_3 = vzipq_s8(vec_v_3_left_tmp1, vec_v_3_left_tmp0);
             int8x16x2_t  vec_v_right_3 = vzipq_s8(vec_v_3_right_tmp1, vec_v_3_right_tmp0);
-            vec_c[2] += vec_v_left_3.val[0];
-            vec_c[2] += vec_v_right_3.val[0];
-            vec_c[3] += vec_v_left_3.val[1];
-            vec_c[3] += vec_v_right_3.val[1];
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_left_3.val[0]));
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_right_3.val[0]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_left_3.val[1]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_right_3.val[1]));
         
        }
 
@@ -305,7 +305,7 @@ inline void tbl_impl_3200_3200(int32_t* c, int8_t* lut, uint8_t* a) {
 #ifdef __ARM_NEON
     const int KK = BBK3200_3200 / 2;
     const uint8x16_t vec_mask = vdupq_n_u8(0x0f);
-    const int8x16_t vec_zero = vdupq_n_s16(0x0000);
+    const int16x8_t vec_zero = vdupq_n_s16(0x0000);
     int8x16_t vec_lut[2 * KK];
     int16x8_t vec_c[8];
 #pragma unroll
@@ -332,10 +332,10 @@ inline void tbl_impl_3200_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_0_right_tmp1 = vqtbl1q_s8(vec_lut[4 * k + 3], vec_a0_bot);
             int8x16x2_t  vec_v_left_0 = vzipq_s8(vec_v_0_left_tmp1, vec_v_0_left_tmp0);
             int8x16x2_t  vec_v_right_0 = vzipq_s8(vec_v_0_right_tmp1, vec_v_0_right_tmp0);
-            vec_c[0] += vec_v_left_0.val[0];
-            vec_c[0] += vec_v_right_0.val[0];
-            vec_c[1] += vec_v_left_0.val[1];
-            vec_c[1] += vec_v_right_0.val[1];
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_left_0.val[0]));
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_right_0.val[0]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_left_0.val[1]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_right_0.val[1]));
         
             uint8x16_t vec_a_1 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 1 * 16);
             uint8x16_t vec_a1_top = vshrq_n_u8(vec_a_1, 4);
@@ -346,10 +346,10 @@ inline void tbl_impl_3200_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_1_right_tmp1 = vqtbl1q_s8(vec_lut[4 * k + 3], vec_a1_bot);
             int8x16x2_t  vec_v_left_1 = vzipq_s8(vec_v_1_left_tmp1, vec_v_1_left_tmp0);
             int8x16x2_t  vec_v_right_1 = vzipq_s8(vec_v_1_right_tmp1, vec_v_1_right_tmp0);
-            vec_c[2] += vec_v_left_1.val[0];
-            vec_c[2] += vec_v_right_1.val[0];
-            vec_c[3] += vec_v_left_1.val[1];
-            vec_c[3] += vec_v_right_1.val[1];
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_left_1.val[0]));
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_right_1.val[0]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_left_1.val[1]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_right_1.val[1]));
         
             uint8x16_t vec_a_2 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 2 * 16);
             uint8x16_t vec_a2_top = vshrq_n_u8(vec_a_2, 4);
@@ -360,10 +360,10 @@ inline void tbl_impl_3200_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_2_right_tmp1 = vqtbl1q_s8(vec_lut[4 * k + 3], vec_a2_bot);
             int8x16x2_t  vec_v_left_2 = vzipq_s8(vec_v_2_left_tmp1, vec_v_2_left_tmp0);
             int8x16x2_t  vec_v_right_2 = vzipq_s8(vec_v_2_right_tmp1, vec_v_2_right_tmp0);
-            vec_c[4] += vec_v_left_2.val[0];
-            vec_c[4] += vec_v_right_2.val[0];
-            vec_c[5] += vec_v_left_2.val[1];
-            vec_c[5] += vec_v_right_2.val[1];
+            vec_c[4] = vaddq_s16(vec_c[4], vreinterpretq_s16_s8(vec_v_left_2.val[0]));
+            vec_c[4] = vaddq_s16(vec_c[4], vreinterpretq_s16_s8(vec_v_right_2.val[0]));
+            vec_c[5] = vaddq_s16(vec_c[5], vreinterpretq_s16_s8(vec_v_left_2.val[1]));
+            vec_c[5] = vaddq_s16(vec_c[5], vreinterpretq_s16_s8(vec_v_right_2.val[1]));
         
             uint8x16_t vec_a_3 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 3 * 16);
             uint8x16_t vec_a3_top = vshrq_n_u8(vec_a_3, 4);
@@ -374,10 +374,10 @@ inline void tbl_impl_3200_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_3_right_tmp1 = vqtbl1q_s8(vec_lut[4 * k + 3], vec_a3_bot);
             int8x16x2_t  vec_v_left_3 = vzipq_s8(vec_v_3_left_tmp1, vec_v_3_left_tmp0);
             int8x16x2_t  vec_v_right_3 = vzipq_s8(vec_v_3_right_tmp1, vec_v_3_right_tmp0);
-            vec_c[6] += vec_v_left_3.val[0];
-            vec_c[6] += vec_v_right_3.val[0];
-            vec_c[7] += vec_v_left_3.val[1];
-            vec_c[7] += vec_v_right_3.val[1];
+            vec_c[6] = vaddq_s16(vec_c[6], vreinterpretq_s16_s8(vec_v_left_3.val[0]));
+            vec_c[6] = vaddq_s16(vec_c[6], vreinterpretq_s16_s8(vec_v_right_3.val[0]));
+            vec_c[7] = vaddq_s16(vec_c[7], vreinterpretq_s16_s8(vec_v_left_3.val[1]));
+            vec_c[7] = vaddq_s16(vec_c[7], vreinterpretq_s16_s8(vec_v_right_3.val[1]));
         
        }
 
@@ -439,7 +439,7 @@ inline void tbl_impl_8640_3200(int32_t* c, int8_t* lut, uint8_t* a) {
 #ifdef __ARM_NEON
     const int KK = BBK8640_3200 / 2;
     const uint8x16_t vec_mask = vdupq_n_u8(0x0f);
-    const int8x16_t vec_zero = vdupq_n_s16(0x0000);
+    const int16x8_t vec_zero = vdupq_n_s16(0x0000);
     int8x16_t vec_lut[2 * KK];
     int16x8_t vec_c[4];
 #pragma unroll
@@ -466,10 +466,10 @@ inline void tbl_impl_8640_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_0_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 3], vec_a0_bot);
             int8x16x2_t  vec_v_left_0 = vzipq_s8(vec_v_0_left_tmp1, vec_v_0_left_tmp0);
             int8x16x2_t  vec_v_right_0 = vzipq_s8(vec_v_0_right_tmp1, vec_v_0_right_tmp0);
-            vec_c[0] += vec_v_left_0.val[0];
-            vec_c[0] += vec_v_right_0.val[0];
-            vec_c[1] += vec_v_left_0.val[1];
-            vec_c[1] += vec_v_right_0.val[1];
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_left_0.val[0]));
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_right_0.val[0]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_left_0.val[1]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_right_0.val[1]));
         
             uint8x16_t vec_a_1 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 1 * 16);
             uint8x16_t vec_a1_top = vshrq_n_u8(vec_a_1, 4);
@@ -480,10 +480,10 @@ inline void tbl_impl_8640_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_1_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 7], vec_a1_bot);
             int8x16x2_t  vec_v_left_1 = vzipq_s8(vec_v_1_left_tmp1, vec_v_1_left_tmp0);
             int8x16x2_t  vec_v_right_1 = vzipq_s8(vec_v_1_right_tmp1, vec_v_1_right_tmp0);
-            vec_c[0] += vec_v_left_1.val[0];
-            vec_c[0] += vec_v_right_1.val[0];
-            vec_c[1] += vec_v_left_1.val[1];
-            vec_c[1] += vec_v_right_1.val[1];
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_left_1.val[0]));
+            vec_c[0] = vaddq_s16(vec_c[0], vreinterpretq_s16_s8(vec_v_right_1.val[0]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_left_1.val[1]));
+            vec_c[1] = vaddq_s16(vec_c[1], vreinterpretq_s16_s8(vec_v_right_1.val[1]));
         
             uint8x16_t vec_a_2 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 2 * 16);
             uint8x16_t vec_a2_top = vshrq_n_u8(vec_a_2, 4);
@@ -494,10 +494,10 @@ inline void tbl_impl_8640_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_2_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 3], vec_a2_bot);
             int8x16x2_t  vec_v_left_2 = vzipq_s8(vec_v_2_left_tmp1, vec_v_2_left_tmp0);
             int8x16x2_t  vec_v_right_2 = vzipq_s8(vec_v_2_right_tmp1, vec_v_2_right_tmp0);
-            vec_c[2] += vec_v_left_2.val[0];
-            vec_c[2] += vec_v_right_2.val[0];
-            vec_c[3] += vec_v_left_2.val[1];
-            vec_c[3] += vec_v_right_2.val[1];
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_left_2.val[0]));
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_right_2.val[0]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_left_2.val[1]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_right_2.val[1]));
         
             uint8x16_t vec_a_3 = vld1q_u8(a + i * KK / 2 + k * 32 * 2 + 3 * 16);
             uint8x16_t vec_a3_top = vshrq_n_u8(vec_a_3, 4);
@@ -508,10 +508,10 @@ inline void tbl_impl_8640_3200(int32_t* c, int8_t* lut, uint8_t* a) {
             int8x16_t  vec_v_3_right_tmp1 = vqtbl1q_s8(vec_lut[8 * k + 7], vec_a3_bot);
             int8x16x2_t  vec_v_left_3 = vzipq_s8(vec_v_3_left_tmp1, vec_v_3_left_tmp0);
             int8x16x2_t  vec_v_right_3 = vzipq_s8(vec_v_3_right_tmp1, vec_v_3_right_tmp0);
-            vec_c[2] += vec_v_left_3.val[0];
-            vec_c[2] += vec_v_right_3.val[0];
-            vec_c[3] += vec_v_left_3.val[1];
-            vec_c[3] += vec_v_right_3.val[1];
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_left_3.val[0]));
+            vec_c[2] = vaddq_s16(vec_c[2], vreinterpretq_s16_s8(vec_v_right_3.val[0]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_left_3.val[1]));
+            vec_c[3] = vaddq_s16(vec_c[3], vreinterpretq_s16_s8(vec_v_right_3.val[1]));
         
        }
 
@@ -581,7 +581,7 @@ void ggml_qgemm_lut(int m, int k, void* A, void* LUT, void* Scales, void* LUT_Sc
 }
 
 void ggml_bitnet_transform_tensor(struct ggml_tensor * tensor) {
-    if (!(is_type_supported(tensor->type) && tensor->backend == GGML_BACKEND_TYPE_CPU && tensor->extra == nullptr)) {
+    if (!(is_type_supported(tensor->type) && tensor->extra == nullptr)) {
         return;
     }
 
@@ -618,7 +618,7 @@ else if (m == 8640 && k == 3200) {
     tensor->extra = bitnet_tensor_extras + bitnet_tensor_extras_index;
     bitnet_tensor_extras[bitnet_tensor_extras_index++] = {
         /* .lut_scales_size = */ lut_scales_size,
-        /* .scales_size     = */ scales_size,
+        /* .BK              = */ BK,
         /* .n_tile_num      = */ n_tile_num,
         /* .qweights        = */ qweights,
         /* .scales          = */ scales
