@@ -14,6 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # option list
 option(BITNET_ARM_TL1    "bitnet.cpp: use tl1 on arm platform"    OFF)
 option(BITNET_X86_TL2    "bitnet.cpp: use tl2 on x86 platform"    OFF)
+option(BITNET_TP         "bitnet.cpp: enable weight-sharded tensor-parallel networking" OFF)
 
 
 set(CMAKE_CXX_STANDARD_REQUIRED true)
@@ -31,6 +32,9 @@ endif()
 if (GGML_BITNET_X86_TL2)
     add_compile_definitions(GGML_BITNET_X86_TL2)
 endif()
+if (BITNET_TP)
+    add_compile_definitions(GGML_BITNET_TP)
+endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-fpermissive)
@@ -41,6 +45,22 @@ find_package(Threads REQUIRED)
 add_subdirectory(src)
 set(LLAMA_BUILD_SERVER ON CACHE BOOL "Build llama.cpp server" FORCE)
 add_subdirectory(3rdparty/llama.cpp)
+
+if (BITNET_TP)
+    # ggml-bitnet-lut.cpp is compiled into the `ggml-cpu` target (not `ggml`
+    # itself -- that's just the umbrella target) by llama.cpp's own
+    # ggml_add_cpu_backend_variant_impl(); its TP dispatch code needs these two
+    # headers, added here instead of touching the vendored llama.cpp CMake files.
+    if (TARGET ggml-cpu)
+        target_include_directories(ggml-cpu PRIVATE
+            ${CMAKE_SOURCE_DIR}/tools/tp-common
+            ${CMAKE_SOURCE_DIR}/3rdparty/llama.cpp/vendor/nlohmann)
+    else()
+        message(FATAL_ERROR "BITNET_TP requires the `ggml-cpu` target, which was not found "
+                             "(unexpected CPU backend variant naming from llama.cpp's CMake)")
+    endif()
+    add_subdirectory(tools/tp-worker)
+endif()
 
 # install
 
